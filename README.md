@@ -48,12 +48,12 @@ Puis exécuter les migrations et le seeding (voir `docs/06-guide-utilisation/` p
 |---|---|---|---|
 | `main` | permanente | stable | Production — fusion de `develop` par étape validée, avec tag de version |
 | `develop` | permanente | intégration | Fusion des branches de fonctionnalités validées |
-| `docs/analyse-besoin` | documentation | en cours | Étape 1 : analyse du besoin |
-| `docs/conception-uml` | documentation | à venir | Étape 2 : diagrammes UML |
-| `docs/design-figma` | documentation | à venir | Étape 3 : design UI/UX |
-| `docs/proposition-financiere` | documentation | à venir | Étape 4 : chiffrage |
-| `docs/fiche-technique` | documentation | à venir | Étape 5 : fiche technique |
-| `docs/guide-utilisation` | documentation | à venir | Étape 7 : guide utilisateur |
+| `docs/analyse-besoin` | documentation | livrée | Étape 1 : analyse du besoin |
+| `docs/conception-uml` | documentation | livrée | Étape 2 : diagrammes UML |
+| `docs/design-figma` | documentation | livrée | Étape 3 : design UI/UX |
+| `docs/proposition-financiere` | documentation | livrée | Étape 4 : chiffrage |
+| `docs/fiche-technique` | documentation | livrée | Étape 5 : fiche technique |
+| `docs/guide-utilisation` | documentation | livrée | Étape 7 : guide utilisateur |
 | `feature/<service>-<fonctionnalité>` | fonctionnalité | à venir | Une branche = une fonctionnalité, PR vers `develop` |
 
 Règles :
@@ -66,8 +66,42 @@ Règles :
 
 ## Documentation
 
-- [Analyse du besoin](docs/01-analyse-besoin/analyse-besoin.md) (étape 1)
-- Les étapes suivantes seront ajoutées au fur et à mesure.
+- [Analyse du besoin](docs/01-analyse-besoin/analyse-besoin.md) (étape 1, MD + PDF)
+- [Conception UML](docs/02-conception-uml/README.md) (étape 2, 48 sources Mermaid + 96 exports SVG/PNG)
+- [Design UI/UX](docs/03-design/) (étape 3, charte, wireframes, maquettes SVG, guide Figma)
+- [Proposition financière](docs/04-proposition-financiere/) (étape 4, MD + PDF + Gantt)
+- [Fiche technique](docs/05-fiche-technique/) (étape 5, MD + PDF)
+- [Guide d'utilisation](docs/06-guide-utilisation/guide-utilisation.md) (étape 7, MD + PDF)
+
+## Architecture logicielle
+
+Micro-services Laravel 12 / PHP 8.3, un dossier par service dans `services/` :
+
+| Service | Rôle | Base |
+|---|---|---|
+| `auth-service` | JWT, utilisateurs, RBAC, audit | auth_db |
+| `organisation-service` | Ministères, directions, sites, catégories | organisation_db |
+| `asset-service` | Biens, QR codes, statuts | asset_db |
+| `movement-service` | Affectations, transferts, entrées/sorties, validations | movement_db |
+| `inventory-service` | Campagnes, constats, écarts, réconciliation | inventory_db |
+| `maintenance-service` | Plans, pannes, interventions, prestataires | maintenance_db |
+| `valuation-service` | Amortissements, VNC, réévaluations | valuation_db |
+| `document-service` | Documents, versions, fichiers | document_db |
+| `notification-service` | Alertes in-app | notification_db |
+| `reporting-service` | Dashboards, exports CSV/PDF | reporting_db |
+| `frontend/` (web-app) | Interface Inertia.js + Vue 3 + Tailwind | — |
+
+Passerelle Nginx (`api-gateway`) : routage `/api/v1/*`, rate limiting, point d'entrée unique.
+Infrastructure : PostgreSQL 16, RabbitMQ, Redis — voir `docker-compose.yml`.
+
+## Démarrage rapide
+
+```bash
+docker compose up -d --build
+# Web : http://localhost — API : http://localhost/api-gateway/api/v1/
+```
+
+Comptes de démonstration (voir `docs/06-guide-utilisation/`) : admin@etat.tg, gestionnaire@etat.tg, agent@etat.tg, auditeur@etat.tg.
 
 ## Licence
 
