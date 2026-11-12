@@ -174,8 +174,10 @@ services:
     container_name: patrimoine-web
     restart: unless-stopped
     env_file: ./frontend/.env
+    environment:
+      RUN_MIGRATIONS: "false"
     volumes:
-      - ./frontend:/var/www
+      - frontend-storage:/var/www/html/storage
     networks: [patrimoine-net]
 
   # ---------------------------------------------------------------------------
@@ -229,6 +231,7 @@ volumes:
   redis-data:
   documents:
   backups:
+  frontend-storage:
 
 networks:
   patrimoine-net:
