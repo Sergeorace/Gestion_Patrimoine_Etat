@@ -8,10 +8,15 @@ frontend/.env
 # Dependances / builds
 vendor/
 node_modules/
-public/build/
+**/public/build/
 public/hot
 storage/*.key
 .phpunit.result.cache
+
+# Artefacts generes localement (composer install hors Docker)
+**/composer.lock
+**/bootstrap/cache/
+**/storage/
 Homestead.json
 Homestead.yaml
 auth.json
