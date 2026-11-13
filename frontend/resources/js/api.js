@@ -1,5 +1,5 @@
 // Client API vers la passerelle Nginx (JWT stocke en localStorage)
-const BASE = import.meta.env.VITE_API_URL || '/api-gateway';
+const BASE = import.meta.env.VITE_API_URL || '/api/v1';
 export const apiBase = BASE;
 
 export function getToken() { return localStorage.getItem('jwt'); }
