@@ -7,4 +7,12 @@ export default defineConfig({
         laravel({ input: ['resources/js/app.js', 'resources/css/app.css'], ssr: false }),
         vue(),
     ],
+    build: {
+        rollupOptions: {
+            input: {
+                app: 'resources/js/app.js',
+                css: 'resources/css/app.css',
+            },
+        },
+    },
 });
