@@ -12,7 +12,8 @@ RUN composer install --no-dev --no-scripts --no-autoloader || composer install -
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY . .
-RUN composer dump-autoload --optimize && npm run build
+RUN mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && composer dump-autoload --optimize && npm run build
 
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

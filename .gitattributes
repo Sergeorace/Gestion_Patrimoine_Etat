@@ -1,4 +1,5 @@
 # Fichiers binaires : ne jamais convertir les fins de ligne
+*.sh text eol=lf
 *.pdf binary
 *.png binary
 *.jpg binary

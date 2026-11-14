@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
-cd /var/www
+cd /var/www/html
 
 # Migrations idempotentes au demarrage (base dédiée au service)
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then

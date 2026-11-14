@@ -16,6 +16,7 @@ CREATE DATABASE valuation_db;
 CREATE DATABASE document_db;
 CREATE DATABASE notification_db;
 CREATE DATABASE reporting_db;
+CREATE DATABASE web_db;
 
 -- Droits : le role proprietaire (POSTGRES_USER) a tous les droits sur ses bases.
 -- Pour un cloisonnement plus strict en production, creer un role par service :
