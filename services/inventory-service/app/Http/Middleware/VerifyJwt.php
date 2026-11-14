@@ -23,6 +23,17 @@ class VerifyJwt
             return $this->error('UNAUTHENTICATED', 'Jeton d\'accès manquant.', 401);
         }
 
+        // Appel inter-services : jeton statique partage (SERVICE_TOKEN).
+        $serviceToken = env('SERVICE_TOKEN');
+        if ($serviceToken && hash_equals($serviceToken, $token)) {
+            $request->attributes->set('jwt', [
+                'sub' => 'service',
+                'permissions' => ['*'],
+                'structure_id' => null,
+            ]);
+            return $next($request);
+        }
+
         $claims = Jwt::decode($token);
         if (! $claims || empty($claims['sub'])) {
             return $this->error('TOKEN_INVALID', 'Jeton invalide ou expire.', 401);
