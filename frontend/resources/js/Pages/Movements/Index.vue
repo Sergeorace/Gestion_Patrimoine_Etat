@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { api } from '../../api';
 import { Link } from '@inertiajs/vue3';
+import { loadAuth, peutAction } from '../../authz';
 
 const items = ref([]), err = ref('');
 const biens = ref({}), structures = ref({});
@@ -22,6 +23,7 @@ const struct = (id) => structures.value[id];
 const statut = (s) => STATUTS[s] ?? [s ?? '—', 'et-gris'];
 
 onMounted(async () => {
+  loadAuth();
   try {
     const [m, a, s] = await Promise.all([
       api.get('/movements?per_page=50'),
@@ -39,7 +41,7 @@ onMounted(async () => {
   <AppLayout title="Affectations">
     <div class="flex justify-between items-center mb-5">
       <p class="text-sm" style="color: var(--discret);">{{ items.length }} mouvement{{ items.length > 1 ? 's' : '' }} enregistré{{ items.length > 1 ? 's' : '' }}</p>
-      <Link href="/mouvements/nouveau" class="btn btn-primaire">+ Nouvelle affectation</Link>
+      <Link v-if="peutAction('mouvement.creer')" href="/mouvements/nouveau" class="btn btn-primaire">+ Nouvelle affectation</Link>
     </div>
 
     <p v-if="err" class="text-sm mb-3" style="color: var(--rouge-700);">{{ err }}</p>

@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { api } from '../../api';
 import { Link } from '@inertiajs/vue3';
+import { loadAuth, peutAction } from '../../authz';
 
 const items = ref([]), total = ref(0), page = ref(1), q = ref(''), err = ref('');
 const categories = ref([]), structures = ref([]);
@@ -27,6 +28,7 @@ async function load(p = 1) {
   } catch (e) { err.value = e.message; }
 }
 onMounted(async () => {
+  loadAuth();
   load();
   try {
     const [c, s] = await Promise.all([api.get('/organisation/categories'), api.get('/organisation/structures')]);
@@ -45,7 +47,7 @@ onMounted(async () => {
           <input v-model="q" placeholder="Rechercher (code, désignation)…" class="champ w-72">
           <button class="btn btn-secondaire">Rechercher</button>
         </form>
-        <Link href="/biens/nouveau" class="btn btn-primaire">+ Nouveau bien</Link>
+        <Link v-if="peutAction('bien.creer')" href="/biens/nouveau" class="btn btn-primaire">+ Nouveau bien</Link>
       </div>
     </div>
 

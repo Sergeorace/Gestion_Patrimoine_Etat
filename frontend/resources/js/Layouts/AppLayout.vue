@@ -1,43 +1,45 @@
 <script setup>
-import { Link, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, ref } from 'vue';
-import { api, getToken } from '../api';
+import { Link, usePage, router } from '@inertiajs/vue3';
+import { computed, onMounted, watch } from 'vue';
+import { api } from '../api';
+import { authz, loadAuth, pageAutorisee } from '../authz';
 
 const props = defineProps({ title: { type: String, default: '' } });
 const page = usePage();
 
 const nav = [
-  ['Tableau de bord', '/tableau-de-bord'],
-  ['Biens', '/biens'],
-  ['Affectations', '/affectations'],
-  ['Maintenance', '/maintenance'],
-  ['Inventaires', '/inventaires'],
-  ['Rapports', '/rapports'],
-  ['Administration', '/admin'],
+  { label: 'Tableau de bord', href: '/tableau-de-bord' },
+  { label: 'Biens', href: '/biens' },
+  { label: 'Affectations', href: '/affectations' },
+  { label: 'Maintenance', href: '/maintenance' },
+  { label: 'Inventaires', href: '/inventaires' },
+  { label: 'Rapports', href: '/rapports' },
+  { label: 'Administration', href: '/admin' },
 ];
 
-const user = ref(null);
-const roles = ref([]);
-onMounted(async () => {
-  if (! getToken()) return;
-  try {
-    user.value = await api.get('/auth/me');
-    roles.value = user.value?.roles ?? [];
-  } catch { /* session expirée gérée par api.js */ }
-});
+const user = computed(() => authz.user);
+const roles = computed(() => authz.user?.roles ?? []);
 
-// Navigation adaptée au rôle : l'administration reste réservée aux admins.
-const navFiltre = computed(() => {
-  const estAdmin = roles.value.includes('admin');
-  return nav.filter(([label]) => estAdmin || label !== 'Administration');
-});
+onMounted(loadAuth);
+
+// Garde de navigation : toute page hors du périmètre du rôle
+// renvoie vers le tableau de bord.
+watch(() => page.url, async (url) => {
+  await loadAuth();
+  const path = url.split('?')[0];
+  if (path !== '/tableau-de-bord' && ! pageAutorisee(path)) {
+    router.visit('/tableau-de-bord');
+  }
+}, { immediate: true });
+
+const navFiltre = computed(() => nav.filter((n) => pageAutorisee(n.href)));
+const actif = (href) => page.url === href || (href !== '/tableau-de-bord' && page.url.startsWith(href));
 
 function logout() {
   api.post('/auth/logout').catch(() => {});
   localStorage.removeItem('jwt');
   window.location.href = '/connexion';
 }
-const actif = (href) => page.url === href || (href !== '/tableau-de-bord' && page.url.startsWith(href));
 </script>
 
 <template>
@@ -59,9 +61,9 @@ const actif = (href) => page.url === href || (href !== '/tableau-de-bord' && pag
       </div>
 
       <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <Link v-for="[label, href] in navFiltre" :key="href" :href="href"
-              :class="['nav-item', { actif: actif(href) }]">
-          {{ label }}
+        <Link v-for="n in navFiltre" :key="n.href" :href="n.href"
+              :class="['nav-item', { actif: actif(n.href) }]">
+          {{ n.label }}
         </Link>
       </nav>
 

@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { api } from '../../api';
+import { loadAuth, peutAction } from '../../authz';
 
 const categories = ref([]), structures = ref([]), biens = ref([]);
 const f = ref({
@@ -25,6 +26,8 @@ async function submit() {
 }
 
 onMounted(async () => {
+  await loadAuth();
+  if (! peutAction('bien.creer')) { router.visit('/biens'); return; }
   try {
     const [c, s, b] = await Promise.all([
       api.get('/organisation/categories'),

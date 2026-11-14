@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             ['code' => 'bien.creer', 'module' => 'patrimoine', 'action' => 'creer'],
             ['code' => 'bien.modifier', 'module' => 'patrimoine', 'action' => 'modifier'],
             ['code' => 'mouvement.creer', 'module' => 'mouvements', 'action' => 'creer'],
+            ['code' => 'mouvement.lire', 'module' => 'mouvements', 'action' => 'lire'],
             ['code' => 'mouvement.valider', 'module' => 'mouvements', 'action' => 'valider'],
             ['code' => 'inventaire.gerer', 'module' => 'inventaire', 'action' => 'gerer'],
             ['code' => 'inventaire.saisir', 'module' => 'inventaire', 'action' => 'saisir'],
@@ -30,6 +31,7 @@ class DatabaseSeeder extends Seeder
             ['code' => 'document.gerer', 'module' => 'documents', 'action' => 'gerer'],
             ['code' => 'audit.lire', 'module' => 'audit', 'action' => 'lire'],
             ['code' => 'rapport.lire', 'module' => 'reporting', 'action' => 'lire'],
+            ['code' => 'rapport.gerer', 'module' => 'reporting', 'action' => 'gerer'],
             ['code' => '*', 'module' => 'systeme', 'action' => 'all'],
         ];
         foreach ($permissions as $p) {
@@ -43,19 +45,19 @@ class DatabaseSeeder extends Seeder
                 'referentiel.gerer', 'bien.lire', 'bien.creer', 'bien.modifier',
                 'mouvement.creer', 'mouvement.valider', 'inventaire.gerer',
                 'maintenance.gerer', 'valorisation.lire', 'valorisation.gerer',
-                'document.gerer', 'audit.lire', 'rapport.lire',
+                'document.gerer', 'audit.lire', 'rapport.lire', 'rapport.gerer',
             ]],
             'responsable' => ['libelle' => 'Responsable de structure', 'perms' => [
                 'bien.lire', 'bien.creer', 'bien.modifier', 'mouvement.creer',
                 'inventaire.gerer', 'maintenance.gerer', 'document.gerer',
-                'valorisation.lire', 'rapport.lire',
+                'valorisation.lire', 'rapport.lire', 'rapport.gerer',
             ]],
             'inventoriste' => ['libelle' => 'Agent inventorialiste', 'perms' => [
                 'bien.lire', 'inventaire.saisir', 'document.gerer',
             ]],
             'comptable' => ['libelle' => 'Comptable matieres', 'perms' => [
                 'bien.lire', 'valorisation.lire', 'valorisation.gerer',
-                'mouvement.lire', 'rapport.lire', 'audit.lire',
+                'mouvement.lire', 'rapport.lire', 'rapport.gerer', 'audit.lire',
             ]],
             'maintenance' => ['libelle' => 'Agent de maintenance', 'perms' => [
                 'bien.lire', 'maintenance.gerer', 'document.gerer',

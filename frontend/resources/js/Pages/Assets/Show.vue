@@ -3,10 +3,11 @@ import { computed, onMounted, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { api } from '../../api';
+import { loadAuth, peutUne } from '../../authz';
 
 const page = usePage();
 const id = page.props.assetId;
-const bien = ref(null), historique = ref([]), categories = ref([]), err = ref('');
+const bien = ref(null), historique = ref([]), categories = ref([]), err = ref(''), voirMouvements = ref(false);
 
 const ETATS = {
   disponible: ['Disponible', 'et-gris'],
@@ -20,14 +21,16 @@ const STATUTS_MVT = { brouillon: 'Brouillon', validee: 'Validée', rejetee: 'Rej
 const catName = computed(() => categories.value.find(c => c.id === bien.value?.categorie_id)?.libelle ?? '—');
 
 onMounted(async () => {
+  await loadAuth();
+  voirMouvements.value = peutUne('mouvement.lire', 'mouvement.creer', 'mouvement.valider');
   try {
     const [b, m, c] = await Promise.all([
       api.get(`/assets/${id}`),
-      api.get('/movements?per_page=100'),
+      voirMouvements.value ? api.get('/movements?per_page=100') : Promise.resolve(null),
       api.get('/organisation/categories'),
     ]);
     bien.value = b;
-    const all = m.data ?? m ?? [];
+    const all = m?.data ?? m ?? [];
     historique.value = all.filter(x => x.bien_id === id);
     categories.value = Array.isArray(c) ? c : (c.data ?? []);
   } catch (e) { err.value = e.message; }
@@ -59,7 +62,7 @@ onMounted(async () => {
         <p v-if="bien.description" class="text-sm mt-5 pt-4" style="color: var(--discret); border-top: 1px solid var(--ligne);">{{ bien.description }}</p>
       </div>
 
-      <div class="carte overflow-x-auto">
+      <div v-if="voirMouvements" class="carte overflow-x-auto">
         <div class="px-5 py-4 border-b" style="border-color: var(--ligne);">
           <h2 class="text-sm font-bold">Historique des mouvements</h2>
         </div>

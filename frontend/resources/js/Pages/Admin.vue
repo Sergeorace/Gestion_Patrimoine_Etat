@@ -1,7 +1,9 @@
 <script setup>
 import AppLayout from '../Layouts/AppLayout.vue';
 import { api } from '../api';
+import { loadAuth, peutAction } from '../authz';
 import { onMounted, ref } from 'vue';
+import { router } from '@inertiajs/vue3';
 
 const users = ref([]), roles = ref([]), structures = ref({}), err = ref('');
 const showForm = ref(false), saving = ref(false), formErr = ref(''), created = ref('');
@@ -43,7 +45,11 @@ async function save() {
   } catch (e) { formErr.value = e.message; } finally { saving.value = false; }
 }
 
-onMounted(load);
+onMounted(async () => {
+  await loadAuth();
+  if (! peutAction('admin')) { router.visit('/tableau-de-bord'); return; }
+  await load();
+});
 </script>
 
 <template>

@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import AppLayout from '../Layouts/AppLayout.vue';
 import { api, apiBase } from '../api';
+import { loadAuth, peutAction } from '../authz';
 
 const d = ref(null), items = ref([]), err = ref(''), notice = ref('');
 const busy = ref('');
@@ -37,7 +38,7 @@ async function generer(type, format) {
 }
 
 const fcfa = (n) => (Number(n) || 0).toLocaleString('fr-FR');
-onMounted(load);
+onMounted(async () => { loadAuth(); await load(); });
 </script>
 
 <template>
@@ -72,7 +73,7 @@ onMounted(load);
       <div v-for="t in TYPES_RAPPORTS" :key="t.type" class="carte p-5 flex flex-col">
         <h3 class="text-sm font-bold">{{ t.titre }}</h3>
         <p class="text-xs mt-1 mb-4 flex-1" style="color: var(--discret);">{{ t.desc }}</p>
-        <div class="flex gap-2">
+        <div v-if="peutAction('rapport.gerer')" class="flex gap-2">
           <button v-for="(label, fmt) in FORMATS" :key="fmt"
                   :disabled="!!busy"
                   @click="generer(t.type, fmt)"
@@ -80,6 +81,7 @@ onMounted(load);
             {{ busy === `${t.type}-${fmt}` ? '…' : `Générer ${label}` }}
           </button>
         </div>
+        <p v-else class="text-xs" style="color: var(--discret);">Consultation seule.</p>
       </div>
     </section>
 

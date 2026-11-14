@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import { api } from '../../api';
+import { loadAuth, peutAction } from '../../authz';
 
 const biens = ref([]), structures = ref([]);
 const f = ref({ type: 'affectation', bien_id: '', structure_dest_id: '', motif: '', motif_sortie_id: '', date_effet: '' });
@@ -24,6 +25,8 @@ async function submit() {
 }
 
 onMounted(async () => {
+  await loadAuth();
+  if (! peutAction('mouvement.creer')) { router.visit('/affectations'); return; }
   try {
     const [b, s] = await Promise.all([api.get('/assets?per_page=100'), api.get('/organisation/structures')]);
     biens.value = b.data ?? b ?? [];

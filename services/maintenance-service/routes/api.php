@@ -8,10 +8,12 @@ Route::get('/health', [HealthController::class, 'index']);
 Route::get('/up', fn () => response()->json(['status' => 'ok']));
 
 Route::middleware(['jwt', 'throttle:api'])->group(function () {
-    Route::get('maintenance/plans', [MaintenanceController::class, 'plans']);
-    Route::get('maintenance/interventions', [MaintenanceController::class, 'interventions']);
-    Route::get('maintenance/interventions/{id}', [MaintenanceController::class, 'show']);
-    Route::get('maintenance/prestataires', [MaintenanceController::class, 'prestataires']);
+    Route::middleware('permission:maintenance.gerer')->group(function () {
+        Route::get('maintenance/plans', [MaintenanceController::class, 'plans']);
+        Route::get('maintenance/interventions', [MaintenanceController::class, 'interventions']);
+        Route::get('maintenance/interventions/{id}', [MaintenanceController::class, 'show']);
+        Route::get('maintenance/prestataires', [MaintenanceController::class, 'prestataires']);
+    });
 
     Route::middleware('permission:maintenance.gerer')->group(function () {
         Route::post('maintenance/plans', [MaintenanceController::class, 'storePlan']);

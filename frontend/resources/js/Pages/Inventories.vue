@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import AppLayout from '../Layouts/AppLayout.vue';
 import { api } from '../api';
+import { loadAuth, peutAction } from '../authz';
 
 const items = ref([]), totalBiens = ref(0), structures = ref({}), err = ref('');
 const showForm = ref(false), saving = ref(false), formErr = ref('');
@@ -52,14 +53,14 @@ async function save() {
   } catch (e) { formErr.value = e.message; } finally { saving.value = false; }
 }
 
-onMounted(load);
+onMounted(async () => { loadAuth(); await load(); });
 </script>
 
 <template>
   <AppLayout title="Inventaires">
     <div class="flex justify-between items-center mb-5">
       <p class="text-sm" style="color: var(--discret);">{{ items.length }} campagne{{ items.length > 1 ? 's' : '' }}</p>
-      <button class="btn btn-primaire" @click="showForm = !showForm">+ Nouvel inventaire</button>
+      <button v-if="peutAction('inventaire.ecrire')" class="btn btn-primaire" @click="showForm = !showForm">+ Nouvel inventaire</button>
     </div>
 
     <form v-if="showForm" @submit.prevent="save" class="carte p-5 mb-5 grid grid-cols-1 md:grid-cols-4 gap-4">

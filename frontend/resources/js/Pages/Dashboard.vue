@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from 'vue';
 import AppLayout from '../Layouts/AppLayout.vue';
 import { api } from '../api';
+import { authz, loadAuth, pageAutorisee, peutUne } from '../authz';
 
 const dash = ref(null), stats = ref(null), categories = ref([]);
 const maint = ref([]), invs = ref([]), mouvements = ref([]), user = ref(null), err = ref('');
@@ -26,7 +27,21 @@ const BLOCS_PAR_ROLE = {
   auditeur:     ['kpis', 'valorisation', 'inventaires', 'mouvements'],
   decideur:     ['kpis', 'valorisation', 'alertes'],
 };
-const blocs = computed(() => new Set(BLOCS_PAR_ROLE[role.value] ?? BLOCS_PAR_ROLE.admin));
+// Permission(s) exigée(s) par chaque bloc — un rôle ne voit jamais un bloc
+// dont l'API sous-jacente lui serait interdite (403).
+const PERM_BLOC = {
+  kpis: [],
+  valorisation: ['valorisation.lire'],
+  alertes: [],
+  categories: ['bien.lire'],
+  mouvements: ['mouvement.lire', 'mouvement.creer', 'mouvement.valider'],
+  interventions: ['maintenance.gerer'],
+  inventaires: ['inventaire.gerer', 'inventaire.saisir', 'audit.lire'],
+};
+const blocs = computed(() => new Set(
+  (BLOCS_PAR_ROLE[role.value] ?? BLOCS_PAR_ROLE.admin)
+    .filter((b) => PERM_BLOC[b].length === 0 || peutUne(...PERM_BLOC[b]))
+));
 const a = (b) => blocs.value.has(b);
 
 const ROLE_TITRE = {
@@ -40,22 +55,23 @@ const ROLE_TITRE = {
   decideur: 'Synthèse stratégique pour la décision.',
 };
 
-// Alertes adaptées au rôle
+// Alertes adaptées au rôle — chaque compteur n'appelle que des API autorisées.
 const ALERTES_BASE = [
-  { cle: 'maintenance', label: 'Maintenances à planifier', n: computed(() => maint.value.filter(i => ['planifiee', 'declaree'].includes(i.statut)).length), href: '/maintenance', ton: 'et-or' },
-  { cle: 'inventaires', label: 'Inventaires en cours', n: computed(() => invs.value.filter(c => c.statut === 'en_cours').length), href: '/inventaires', ton: 'et-bleu' },
-  { cle: 'biens', label: 'Biens sans affectation', n: computed(() => Number(stats.value?.par_statut?.disponible ?? 0)), href: '/biens', ton: 'et-gris' },
+  { cle: 'maintenance', label: 'Maintenances à planifier', n: computed(() => Number(dash.value?.maintenance?.a_venir_30j ?? 0)), href: '/maintenance', ton: 'et-or', page: '/maintenance' },
+  { cle: 'inventaires', label: 'Inventaires en cours', n: computed(() => invs.value.filter(c => c.statut === 'en_cours').length), href: '/inventaires', ton: 'et-bleu', page: '/inventaires' },
+  { cle: 'biens', label: 'Biens sans affectation', n: computed(() => Number(stats.value?.par_statut?.disponible ?? 0)), href: '/biens', ton: 'et-gris', page: '/biens' },
 ];
 const ALERTES_PAR_ROLE = {
   maintenance: ['maintenance'],
   inventoriste: ['inventaires', 'biens'],
   auditeur: ['inventaires'],
-  comptable: ['inventaires'],
-  decideur: ['maintenance', 'inventaires', 'biens'],
+  decideur: ['maintenance'],
 };
 const alertes = computed(() => {
   const cles = ALERTES_PAR_ROLE[role.value] ?? ALERTES_BASE.map(x => x.cle);
-  return ALERTES_BASE.filter(x => cles.includes(x.cle)).map(x => ({ ...x, n: x.n.value }));
+  return ALERTES_BASE
+    .filter(x => cles.includes(x.cle) && pageAutorisee(x.page))
+    .map(x => ({ ...x, n: x.n.value }));
 });
 
 const cats = computed(() => {
@@ -70,8 +86,10 @@ const MVT_STATUTS = { brouillon: 'Brouillon', validee: 'Validée', rejetee: 'Rej
 const INV_STATUTS = { planifiee: 'Planifiée', en_cours: 'En cours', cloturee: 'Clôturée' };
 
 onMounted(async () => {
+  await loadAuth();
+  // Garde de rôle : le tableau de bord est le seul écran universel.
   try {
-    user.value = await api.get('/auth/me');
+    user.value = authz.user ?? await api.get('/auth/me');
   } catch { /* silencieux */ }
   try {
     const [d, s, c] = await Promise.all([
@@ -83,10 +101,11 @@ onMounted(async () => {
     categories.value = Array.isArray(c) ? c : (c.data ?? []);
   } catch (e) { err.value = e.message; }
 
-  // Données des blocs secondaires selon le rôle
+  // Données des blocs secondaires — uniquement si la page correspondante
+  // est dans le périmètre du rôle (évite les 403).
   const jobs = [];
-  if (a('alertes') || a('interventions')) jobs.push(api.get('/maintenance/interventions?per_page=100').then(r => { maint.value = r.data ?? r ?? []; }).catch(() => {}));
-  if (a('alertes') || a('inventaires')) jobs.push(api.get('/inventories?per_page=100').then(r => { invs.value = r.data ?? r ?? []; }).catch(() => {}));
+  if (a('interventions')) jobs.push(api.get('/maintenance/interventions?per_page=100').then(r => { maint.value = r.data ?? r ?? []; }).catch(() => {}));
+  if (pageAutorisee('/inventaires')) jobs.push(api.get('/inventories?per_page=100').then(r => { invs.value = r.data ?? r ?? []; }).catch(() => {}));
   if (a('mouvements')) jobs.push(api.get('/movements?per_page=8').then(r => { mouvements.value = r.data ?? r ?? []; }).catch(() => {}));
   await Promise.all(jobs);
 });
