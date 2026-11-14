@@ -40,8 +40,8 @@ return new class extends Migration
             $table->date('date_realisee')->nullable();
             $table->uuid('agent_id')->nullable();
             $table->uuid('prestataire_id')->nullable();
-            $table->numeric('cout_main_oeuvre', 15, 2)->nullable();
-            $table->numeric('cout_pieces', 15, 2)->default(0);
+            $table->decimal('cout_main_oeuvre', 15, 2)->nullable();
+            $table->decimal('cout_pieces', 15, 2)->default(0);
             $table->text('compte_rendu')->nullable();
             $table->timestamps();
         });

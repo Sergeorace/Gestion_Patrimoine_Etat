@@ -73,7 +73,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('categorie_id')->index();
             $table->string('methode');
-            $table->numeric('taux', 6, 4)->nullable();
+            $table->decimal('taux', 6, 4)->nullable();
             $table->integer('duree_vie_mois');
             $table->date('date_effet');
             $table->timestamps();
