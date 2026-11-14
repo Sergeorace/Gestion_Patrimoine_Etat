@@ -42,33 +42,35 @@ class ReportRenderer
     private static function css(bool $paysage = false): string
     {
         return '
-        @page { margin: 24mm 15mm 18mm; }
+        @page { margin: 24mm 16mm 20mm; }
         * { box-sizing: border-box; }
-        body { font-family: "DejaVu Sans", sans-serif; color: '.self::TEXTE.'; font-size: 10pt; margin: 0; }
-        h1 { font-size: 17pt; color: '.self::VERT.'; margin: 0 0 4mm; }
-        h2 { font-size: 12pt; color: '.self::VERT.'; border-bottom: 1.5px solid '.self::VERT.'; padding-bottom: 1.5mm; margin: 6mm 0 3mm; }
-        h3 { font-size: 10.5pt; color: '.self::VERT.'; margin: 4mm 0 2mm; }
-        table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; }
-        th { background: '.self::VERT.'; color: #fff; font-size: 8.5pt; text-align: left; padding: 1.6mm 2mm; }
-        td { padding: 1.4mm 2mm; border-bottom: 0.3px solid #d8d5c8; font-size: 9pt; vertical-align: top; }
+        body { font-family: "DejaVu Sans", sans-serif; color: '.self::TEXTE.'; font-size: 10pt; line-height: 1.45; margin: 0; }
+        h1 { font-size: 18pt; color: '.self::VERT.'; margin: 0 0 6mm; }
+        h2 { font-size: 13pt; color: '.self::VERT.'; border-bottom: 1.5px solid '.self::VERT.'; padding-bottom: 2mm; margin: 9mm 0 4mm; }
+        h3 { font-size: 11pt; color: '.self::VERT.'; margin: 5mm 0 2.5mm; }
+        table { width: 100%; border-collapse: collapse; margin: 3mm 0 7mm; }
+        th { background: '.self::VERT.'; color: #fff; font-size: 9pt; font-weight: bold; letter-spacing: .3px; text-align: left; padding: 2.4mm 2.6mm; }
+        td { padding: 2.4mm 2.6mm; border-bottom: 0.3px solid #d8d5c8; font-size: 9.5pt; vertical-align: middle; }
+        tr { page-break-inside: avoid; }
         tr:nth-child(even) td { background: #f6f7f4; }
         .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .centrer { text-align: center; }
-        .groupe { background: #e8efe9 !important; font-weight: bold; color: '.self::VERT.'; }
+        .groupe td { background: #e8efe9 !important; font-weight: bold; color: '.self::VERT.'; padding-top: 3mm; padding-bottom: 3mm; }
+        .groupe .groupe-nb { font-weight: normal; color: #475467; }
         .sous-total td { font-weight: bold; background: #f0f4f1; border-top: 1px solid '.self::VERT.'; }
-        .total-general td { font-weight: bold; background: '.self::VERT.'; color: #fff; font-size: 10pt; }
+        .total-general td { font-weight: bold; background: '.self::VERT.'; color: #fff; font-size: 10.5pt; padding-top: 3mm; padding-bottom: 3mm; }
         .cover { page-break-after: always; text-align: center; padding-top: 30mm; }
         .cover .embleme { font-size: 60pt; color: '.self::VERT.'; }
         .cover .rep { font-size: 15pt; font-weight: bold; letter-spacing: 1px; color: '.self::VERT.'; }
         .cover .devise { font-size: 11pt; color: #6b7280; margin: 2mm 0 12mm; }
         .cover .titre { font-size: 20pt; font-weight: bold; color: '.self::TEXTE.'; margin-bottom: 10mm; }
         .cover table { width: 80%; margin: 0 auto; }
-        .cover td { border: none; padding: 1.2mm 3mm; text-align: left; font-size: 10pt; }
+        .cover td { border: none; padding: 1.8mm 3mm; text-align: left; font-size: 10pt; }
         .cover td:first-child { color: #6b7280; width: 40%; }
         .meta { font-size: 8.5pt; color: #6b7280; margin-top: 8mm; }
         .vide { text-align: center; color: #6b7280; padding: 10mm 0; font-style: italic; }
         .synthese { display: table; width: 100%; border: 1px solid #d8d5c8; margin-bottom: 5mm; }
-        .synthese td { border: none; padding: 3mm 4mm; text-align: center; }
+        .synthese td { border: none; padding: 4mm 5mm; text-align: center; }
         .synthese .k { font-size: 8.5pt; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; }
         .synthese .v { font-size: 14pt; font-weight: bold; color: '.self::VERT.'; }
         .section-casse { page-break-before: always; }
@@ -174,61 +176,47 @@ class ReportRenderer
             return $h.'</tr>';
         };
 
+        // 8 colonnes texte puis les colonnes de montants (valeur, amort., VNC)
+        $colsTexte = 8;
+        $montants = function (array $lignes) use ($avecVnc) {
+            $somme = fn (string $k) => array_sum(array_map(fn ($l) => (float) ($l[$k] ?? 0), $lignes));
+            $h = '<td class="num">'.self::fmt($somme('valeur')).'</td>';
+            if ($avecVnc) {
+                $h .= '<td class="num">'.self::fmt($somme('amortissement')).'</td>'
+                     .'<td class="num">'.self::fmt($somme('vnc')).'</td>';
+            }
+            return $h;
+        };
+        // Une seule ligne par niveau : libelle + effectif + sous-totaux
+        $ligneGroupe = function (string $label, array $g) use ($colsTexte, $montants) {
+            return '<tr class="groupe"><td colspan="'.$colsTexte.'">'.$label
+                .' <span class="groupe-nb">('.$g['nb'].' bien'.($g['nb'] > 1 ? 's' : '').')</span></td>'
+                .$montants($g['lignes']).'</tr>';
+        };
+
         // Regroupement region > prefecture > commune
         $parRegion = ValuationCalc::groupTotals($tri, fn ($r) => $r['region'] ?? 'Non renseignée');
         foreach ($parRegion as $region => $gr) {
-            $html .= '<tr class="groupe"><td colspan="9">Région : '.self::e($region).' ('.$gr['nb'].' bien'.($gr['nb'] > 1 ? 's' : '').')</td>';
-            if ($avecVnc) $html .= '<td></td><td></td>';
-            $html .= '</tr>';
+            $html .= $ligneGroupe('Région : '.self::e($region), $gr);
 
             $lignesRegion = $gr['lignes'];
             $parPref = ValuationCalc::groupTotals($lignesRegion, fn ($r) => $r['prefecture'] ?? 'Non renseignée');
             foreach ($parPref as $pref => $gp) {
-                $html .= '<tr class="groupe"><td colspan="9">&nbsp;&nbsp;Préfecture : '.self::e($pref).' ('.$gp['nb'].')</td>';
-                if ($avecVnc) $html .= '<td></td><td></td>';
-                $html .= '</tr>';
+                $html .= $ligneGroupe('&nbsp;&nbsp;Préfecture : '.self::e($pref), $gp);
 
                 $parCommune = ValuationCalc::groupTotals($gp['lignes'], fn ($r) => $r['commune'] ?? 'Non renseignée');
                 foreach ($parCommune as $commune => $gc) {
-                    $html .= '<tr class="groupe"><td colspan="9">&nbsp;&nbsp;&nbsp;Commune : '.self::e($commune).' ('.$gc['nb'].')</td>';
-                    if ($avecVnc) $html .= '<td></td><td></td>';
-                    $html .= '</tr>';
+                    $html .= $ligneGroupe('&nbsp;&nbsp;&nbsp;Commune : '.self::e($commune), $gc);
                     foreach ($gc['lignes'] as $r) $html .= $renderLigne($r);
-                    // sous-total commune (valeur + vnc + amortissements)
-                    $amort = array_sum(array_map(fn ($l) => (float) ($l['amortissement'] ?? 0), $gc['lignes']));
-                    $html .= '<tr class="sous-total"><td colspan="9">Sous-total — '.self::e($commune).'</td>
-                        <td class="num">'.self::fmt($gc['valeur']).'</td>';
-                    if ($avecVnc) {
-                        $html .= '<td class="num">'.self::fmt($amort).'</td><td class="num">'.self::fmt($gc['vnc']).'</td>';
-                    }
-                    $html .= '</tr>';
                 }
-                // sous-total prefecture
-                $amortP = array_sum(array_map(fn ($l) => (float) ($l['amortissement'] ?? 0), $gp['lignes']));
-                $vncP = array_sum(array_map(fn ($l) => (float) ($l['vnc'] ?? 0), $gp['lignes']));
-                $valP = array_sum(array_map(fn ($l) => (float) ($l['valeur'] ?? 0), $gp['lignes']));
-                $html .= '<tr class="sous-total"><td colspan="9">Sous-total — Préfecture de '.self::e($pref).'</td>
-                    <td class="num">'.self::fmt($valP).'</td>';
-                if ($avecVnc) $html .= '<td class="num">'.self::fmt($amortP).'</td><td class="num">'.self::fmt($vncP).'</td>';
-                $html .= '</tr>';
             }
-            // sous-total region
-            $amortR = array_sum(array_map(fn ($l) => (float) ($l['amortissement'] ?? 0), $lignesRegion));
-            $vncR = array_sum(array_map(fn ($l) => (float) ($l['vnc'] ?? 0), $lignesRegion));
-            $valR = array_sum(array_map(fn ($l) => (float) ($l['valeur'] ?? 0), $lignesRegion));
-            $html .= '<tr class="sous-total"><td colspan="9">Sous-total — Région de '.self::e($region).'</td>
-                <td class="num">'.self::fmt($valR).'</td>';
-            if ($avecVnc) $html .= '<td class="num">'.self::fmt($amortR).'</td><td class="num">'.self::fmt($vncR).'</td>';
-            $html .= '</tr>';
         }
 
         // Total general
         $t = ValuationCalc::totals($tri);
-        $amortT = array_sum(array_map(fn ($l) => (float) ($l['amortissement'] ?? 0), $tri));
-        $html .= '<tr class="total-general"><td colspan="9">TOTAL GÉNÉRAL ('.$t['nb'].' biens)</td>
-            <td class="num">'.self::fmt($t['valeur']).'</td>';
-        if ($avecVnc) $html .= '<td class="num">'.self::fmt($amortT).'</td><td class="num">'.self::fmt($t['vnc']).'</td>';
-        $html .= '</tr></tbody></table>';
+        $html .= '<tr class="total-general"><td colspan="'.$colsTexte.'">TOTAL GÉNÉRAL ('.$t['nb'].' biens)</td>'
+            .$montants($tri)
+            .'</tr></tbody></table>';
 
         return $html;
     }
