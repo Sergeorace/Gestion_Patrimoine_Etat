@@ -40,7 +40,18 @@ Puis exécuter les migrations et le seeding (voir `docs/06-guide-utilisation/` p
 
 ## Comptes de démonstration
 
-> En cours de définition — les comptes seront documentés à l'issue de l'initialisation des seeders (étape 6).
+Mot de passe commun : `Patrimoine2026!` (à changer obligatoirement en production).
+
+| Email | Rôle |
+|---|---|
+| admin@etat.tg | Administrateur système |
+| gestionnaire@etat.tg | Gestionnaire central du patrimoine |
+| resp.defense@etat.tg | Responsable de structure |
+| inventoriste@etat.tg | Agent inventorialiste |
+| comptable@etat.tg | Comptable matières |
+| maintenance@etat.tg | Agent de maintenance |
+| auditeur@courdescomptes.tg | Auditeur / Contrôleur |
+| decideur@primature.tg | Décideur |
 
 ## Workflow Git
 
@@ -101,7 +112,7 @@ docker compose up -d --build
 # Web : http://localhost — API : http://localhost/api-gateway/api/v1/
 ```
 
-Comptes de démonstration (voir `docs/06-guide-utilisation/`) : admin@etat.tg, gestionnaire@etat.tg, agent@etat.tg, auditeur@etat.tg.
+Comptes de démonstration : admin@etat.tg, gestionnaire@etat.tg, resp.defense@etat.tg, inventoriste@etat.tg, comptable@etat.tg, maintenance@etat.tg, auditeur@courdescomptes.tg, decideur@primature.tg (mot de passe `Patrimoine2026!`).
 
 ## Licence
 
