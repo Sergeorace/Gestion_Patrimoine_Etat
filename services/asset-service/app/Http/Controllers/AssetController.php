@@ -28,7 +28,7 @@ class AssetController extends Controller
             $q->where('structure_id', $claims['structure_id']);
         }
 
-        foreach (['statut', 'etat', 'type_specifique', 'structure_id', 'site_id', 'categorie_id'] as $f) {
+        foreach (['statut', 'etat', 'type_specifique', 'structure_id', 'site_id', 'categorie_id', 'domaine', 'secteur'] as $f) {
             if ($v = $request->query($f)) $q->where($f, $v);
         }
         if ($s = $request->query('search')) {

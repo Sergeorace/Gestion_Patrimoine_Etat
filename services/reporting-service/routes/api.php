@@ -14,5 +14,8 @@ Route::middleware(['jwt', 'throttle:api'])->group(function () {
         Route::get('reports', [ReportController::class, 'index']);
         Route::get('reports/{id}/download', [ReportController::class, 'download']);
     });
-    Route::middleware('permission:rapport.gerer')->post('reports/generate', [ReportController::class, 'generate']);
+    Route::middleware('permission:rapport.gerer')->group(function () {
+        Route::post('reports/generate', [ReportController::class, 'generate']);
+        Route::get('reports/export/{type}', [ReportController::class, 'export']);
+    });
 });
