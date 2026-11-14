@@ -1,3 +1,103 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ==========================================================================
+   Patrimoine de l'État — identité visuelle
+   Vert institutionnel togolais + or, surfaces claires, données à l'avant.
+   ========================================================================== */
+
+:root {
+  --encre: #1f2d26;
+  --discret: #67715f;
+  --fond: #f4f3ed;
+  --carte: #ffffff;
+  --ligne: #e2dfd2;
+  --vert-950: #0a2b20;
+  --vert-900: #0d3a2b;
+  --vert-800: #114a37;
+  --vert-700: #176045;
+  --vert-600: #1e7a56;
+  --vert-100: #e2efe7;
+  --or: #c19a3f;
+  --or-clair: #f3e9cf;
+  --ambre-100: #f7ecd4;
+  --ambre-700: #8a6410;
+  --rouge-100: #f6e0dc;
+  --rouge-700: #9c3a2c;
+  --bleu-100: #e0e9f4;
+  --bleu-700: #2c5288;
+}
+
+html, body {
+  background: var(--fond);
+  color: var(--encre);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "tnum" 1;
+}
+
+::selection { background: var(--vert-100); }
+
+@layer components {
+  .carte {
+    @apply bg-white rounded-xl;
+    border: 1px solid var(--ligne);
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer select-none;
+  }
+  .btn-primaire { background: var(--vert-700); color: #fff; }
+  .btn-primaire:hover { background: var(--vert-800); }
+  .btn-secondaire {
+    background: #fff; color: var(--encre);
+    border: 1px solid var(--ligne);
+  }
+  .btn-secondaire:hover { background: #faf9f4; border-color: #d4d0bf; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .champ {
+    @apply w-full rounded-lg px-3 py-2 text-sm;
+    background: #fff;
+    border: 1px solid var(--ligne);
+    color: var(--encre);
+  }
+  .champ:focus { outline: 2px solid var(--vert-600); outline-offset: -1px; border-color: var(--vert-600); }
+  .champ::placeholder { color: #9aa08f; }
+
+  .etiquette {
+    @apply inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap;
+  }
+  .et-vert   { background: var(--vert-100);  color: var(--vert-700); }
+  .et-or     { background: var(--or-clair);  color: var(--ambre-700); }
+  .et-gris   { background: #efeee7;         color: var(--discret); }
+  .et-rouge  { background: var(--rouge-100); color: var(--rouge-700); }
+  .et-bleu   { background: var(--bleu-100);  color: var(--bleu-700); }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors cursor-pointer;
+    color: rgba(255, 255, 255, .62);
+  }
+  .nav-item:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+  .nav-item.actif {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+    box-shadow: inset 3px 0 0 var(--or);
+  }
+
+  .th {
+    @apply text-left text-xs font-semibold uppercase tracking-wide px-4 py-3;
+    color: var(--discret);
+    border-bottom: 1px solid var(--ligne);
+  }
+  .td {
+    @apply px-4 py-3 text-sm align-middle;
+    border-bottom: 1px solid #efede3;
+  }
+  .tr-ligne:hover { background: #faf9f4; }
+
+  .kpi-label { @apply text-xs font-medium uppercase tracking-wide; color: var(--discret); }
+  .kpi-valeur { font-size: 1.9rem; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+
+  .lien-code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .8rem; }
+}

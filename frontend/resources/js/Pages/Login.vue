@@ -2,27 +2,54 @@
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { api, setToken } from '../api';
+
 const email = ref(''), password = ref(''), err = ref(''), loading = ref(false);
+
 async function submit() {
   loading.value = true; err.value = '';
   try {
     const r = await api.login(email.value, password.value);
     setToken(r.access_token);
-    router.visit('/');
-  } catch (e) { err.value = e.message; } finally { loading.value = false; }
+    router.visit('/tableau-de-bord');
+  } catch (e) {
+    err.value = e.message === 'Failed to fetch' ? 'Service injoignable. Réessayez.' : e.message;
+  } finally { loading.value = false; }
 }
 </script>
+
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-slate-100">
-    <form @submit.prevent="submit" class="bg-white p-8 rounded-lg shadow w-96">
-      <h1 class="text-xl font-bold mb-1">Patrimoine État</h1>
-      <p class="text-sm text-gray-500 mb-6">Connexion à la plateforme</p>
-      <input v-model="email" type="email" required placeholder="Email" class="w-full border rounded px-3 py-2 mb-3">
-      <input v-model="password" type="password" required placeholder="Mot de passe" class="w-full border rounded px-3 py-2 mb-4">
-      <p v-if="err" class="text-red-600 text-sm mb-3">{{ err }}</p>
-      <button :disabled="loading" class="w-full bg-blue-700 text-white py-2 rounded hover:bg-blue-800 disabled:opacity-50">
-        {{ loading ? 'Connexion…' : 'Se connecter' }}
-      </button>
-    </form>
+  <div class="min-h-screen flex items-center justify-center px-4" style="background: var(--vert-950);">
+    <div class="w-full max-w-sm">
+      <!-- Blason / identité -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
+             style="background: var(--or); color: var(--vert-950); font-weight: 800; font-size: 1.3rem;">PE</div>
+        <h1 class="text-white text-xl font-bold">Patrimoine de l'État</h1>
+        <p class="text-xs mt-1 uppercase tracking-widest" style="color: var(--or);">République Togolaise</p>
+        <p class="text-xs mt-1" style="color: rgba(255,255,255,.45);">Travail · Liberté · Patrie</p>
+      </div>
+
+      <!-- Carte de connexion -->
+      <form @submit.prevent="submit" class="carte p-7">
+        <h2 class="text-base font-bold mb-5">Se connecter</h2>
+        <label class="block text-xs font-medium mb-1.5" style="color: var(--discret);">Adresse e-mail</label>
+        <input v-model="email" type="email" required autocomplete="username"
+               class="champ mb-4" placeholder="nom@structure.tg">
+        <label class="block text-xs font-medium mb-1.5" style="color: var(--discret);">Mot de passe</label>
+        <input v-model="password" type="password" required autocomplete="current-password"
+               class="champ mb-2" placeholder="••••••••">
+        <div class="text-right mb-4">
+          <span class="text-xs cursor-pointer hover:underline" style="color: var(--vert-600);">Mot de passe oublié ?</span>
+        </div>
+        <p v-if="err" class="text-sm mb-3" style="color: var(--rouge-700);">{{ err }}</p>
+        <button :disabled="loading" class="btn btn-primaire w-full justify-center py-2.5">
+          {{ loading ? 'Connexion…' : 'Se connecter' }}
+        </button>
+      </form>
+
+      <p class="text-center text-[11px] mt-6" style="color: rgba(255,255,255,.35);">
+        Plateforme nationale de gestion du patrimoine de l'État togolais
+      </p>
+    </div>
   </div>
 </template>

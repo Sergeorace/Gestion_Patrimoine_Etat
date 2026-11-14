@@ -13,7 +13,8 @@ Route::middleware('web')->group(function () {
     Route::get('/biens/{id}', function (string $id) {
         return Inertia::render('Assets/Show', ['assetId' => $id]);
     })->name('assets.show');
-    Route::get('/mouvements', fn () => Inertia::render('Movements/Index'))->name('movements.index');
+    Route::get('/affectations', fn () => Inertia::render('Movements/Index'))->name('affectations.index');
+    Route::get('/mouvements', fn () => redirect('/affectations'));
     Route::get('/mouvements/nouveau', fn () => Inertia::render('Movements/Create'))->name('movements.create');
     Route::get('/maintenance', fn () => Inertia::render('Maintenance'))->name('maintenance.index');
     Route::get('/inventaires', fn () => Inertia::render('Inventories'))->name('inventories.index');
