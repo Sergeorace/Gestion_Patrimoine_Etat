@@ -1,6 +1,6 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { api, getToken } from '../api';
 
 const props = defineProps({ title: { type: String, default: '' } });
@@ -17,9 +17,19 @@ const nav = [
 ];
 
 const user = ref(null);
+const roles = ref([]);
 onMounted(async () => {
   if (! getToken()) return;
-  try { user.value = await api.get('/auth/me'); } catch { /* session expirée gérée par api.js */ }
+  try {
+    user.value = await api.get('/auth/me');
+    roles.value = user.value?.roles ?? [];
+  } catch { /* session expirée gérée par api.js */ }
+});
+
+// Navigation adaptée au rôle : l'administration reste réservée aux admins.
+const navFiltre = computed(() => {
+  const estAdmin = roles.value.includes('admin');
+  return nav.filter(([label]) => estAdmin || label !== 'Administration');
 });
 
 function logout() {
@@ -49,7 +59,7 @@ const actif = (href) => page.url === href || (href !== '/tableau-de-bord' && pag
       </div>
 
       <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <Link v-for="[label, href] in nav" :key="href" :href="href"
+        <Link v-for="[label, href] in navFiltre" :key="href" :href="href"
               :class="['nav-item', { actif: actif(href) }]">
           {{ label }}
         </Link>
@@ -66,7 +76,8 @@ const actif = (href) => page.url === href || (href !== '/tableau-de-bord' && pag
     </aside>
 
     <!-- ===================== Contenu ===================== -->
-    <div class="flex-1 ml-64 flex flex-col min-w-0">
+    <div class="app-fond flex-1 ml-64 flex flex-col min-w-0 relative">
+      <div class="relative z-10 flex flex-col flex-1 min-h-0">
       <header class="px-8 pt-6 pb-4 flex items-center justify-between gap-4">
         <h1 class="text-xl font-bold tracking-tight">{{ title }}</h1>
         <div v-if="user" class="flex items-center gap-3">
@@ -81,6 +92,7 @@ const actif = (href) => page.url === href || (href !== '/tableau-de-bord' && pag
         </div>
       </header>
       <main class="flex-1 px-8 pb-10"><slot /></main>
+      </div>
     </div>
   </div>
 </template>

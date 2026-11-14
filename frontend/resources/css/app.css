@@ -36,6 +36,26 @@ html, body {
   font-feature-settings: "tnum" 1;
 }
 
+/* Fond de l'espace de travail : degrade doux + courbes topographiques
+   discretes évoquant le territoire togolais. */
+.app-fond {
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(23, 96, 69, .07), transparent 60%),
+    radial-gradient(900px 420px at -10% 110%, rgba(193, 154, 63, .08), transparent 55%),
+    linear-gradient(180deg, #f6f5f0 0%, #f1f0e8 100%);
+  position: relative;
+}
+.app-fond::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'%3E%3Cg fill='none' stroke='%23176045' stroke-opacity='0.05' stroke-width='1'%3E%3Cpath d='M-40 120 C 120 60, 260 180, 420 110 S 640 90, 720 140'/%3E%3Cpath d='M-40 200 C 140 140, 280 260, 440 190 S 660 170, 720 220'/%3E%3Cpath d='M-40 290 C 160 230, 300 350, 460 280 S 680 260, 720 310'/%3E%3Cpath d='M-40 390 C 180 330, 320 450, 480 380 S 700 360, 720 410'/%3E%3Cpath d='M-40 500 C 200 440, 340 560, 500 490 S 720 470, 760 520'/%3E%3Cpath d='M-40 610 C 220 550, 360 670, 520 600 S 740 580, 780 630'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 640px 640px;
+}
+
 ::selection { background: var(--vert-100); }
 
 @layer components {
