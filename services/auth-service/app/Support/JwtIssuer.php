@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\User;
+
 /**
  * Emission de JWT RS256 (auth-service uniquement - cle privee).
  */
@@ -55,14 +57,12 @@ class JwtIssuer
         $p = self::b64url(json_encode($payload));
         $signature = '';
         openssl_sign("$h.$p", $signature, self::privateKey(), OPENSSL_ALGO_SHA256);
-        return "$h.$p.".self::b64url($signature, false);
+        return "$h.$p.".self::b64url($signature);
     }
 
-    private static function b64url(string $data, bool $encode = true): string
+    private static function b64url(string $data): string
     {
-        return $encode
-            ? rtrim(strtr(base64_encode($data), '+/', '-_'), '=')
-            : base64_decode(strtr($data, '-_', '+/').str_repeat('=', (4 - strlen($data) % 4) % 4));
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }
 
     private static function privateKey()
