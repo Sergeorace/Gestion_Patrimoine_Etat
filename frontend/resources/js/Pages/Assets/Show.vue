@@ -18,7 +18,10 @@ const ETATS = {
 const ETAT_PHYSIQUE = { bon: 'Bon', moyen: 'Moyen', degrade: 'Dégradé', hors_service: 'Hors service' };
 const STATUTS_MVT = { brouillon: 'Brouillon', validee: 'Validée', rejetee: 'Rejetée', appliquee: 'Appliquée' };
 
-const catName = computed(() => categories.value.find(c => c.id === bien.value?.categorie_id)?.libelle ?? '—');
+const cat = computed(() => categories.value.find(c => c.id === bien.value?.categorie_id));
+const catName = computed(() => cat.value?.libelle ?? '—');
+const catCompte = computed(() => cat.value?.compte_comptable ?? null);
+const NATURES = { incorporelle: 'Incorporelle', corporelle: 'Corporelle', financiere: 'Financière' };
 
 onMounted(async () => {
   await loadAuth();
@@ -58,6 +61,11 @@ onMounted(async () => {
           <div><dt class="kpi-label mb-1">Valeur d'acquisition</dt><dd class="font-medium" style="font-variant-numeric: tabular-nums;">{{ (Number(bien.valeur_acquisition) || 0).toLocaleString('fr-FR') }} FCFA</dd></div>
           <div><dt class="kpi-label mb-1">Date d'acquisition</dt><dd class="font-medium">{{ bien.date_acquisition ?? '—' }}</dd></div>
           <div><dt class="kpi-label mb-1">Mode</dt><dd class="font-medium">{{ bien.mode_acquisition ?? '—' }}</dd></div>
+          <div><dt class="kpi-label mb-1">Compte OHADA</dt><dd class="font-medium">{{ bien.compte_comptable ?? catCompte ?? '—' }}</dd></div>
+          <div><dt class="kpi-label mb-1">Nature</dt><dd class="font-medium">{{ NATURES[bien.nature] ?? bien.nature ?? '—' }}</dd></div>
+          <div><dt class="kpi-label mb-1">Mise en service</dt><dd class="font-medium">{{ bien.date_mise_en_service ?? '—' }}</dd></div>
+          <div><dt class="kpi-label mb-1">Réf. décision</dt><dd class="font-medium">{{ bien.reference_decision ?? '—' }}</dd></div>
+          <div><dt class="kpi-label mb-1">Imputation</dt><dd class="font-medium">{{ bien.immobilisation ? 'Immobilisation' : 'Charge / consommation' }}</dd></div>
         </dl>
         <p v-if="bien.description" class="text-sm mt-5 pt-4" style="color: var(--discret); border-top: 1px solid var(--ligne);">{{ bien.description }}</p>
       </div>

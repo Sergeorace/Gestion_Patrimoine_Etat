@@ -147,14 +147,19 @@ class ReportController extends Controller
             $nomFeuille = $type === 'patrimoine' ? 'Biens' : 'Valeurs-VNC';
             $avecParRegion = true;
             $colonnes = [
-                'code' => 'Code', 'designation' => 'Désignation', 'categorie' => 'Catégorie',
-                'domaine_libelle' => 'Domaine', 'secteur' => 'Secteur', 'service' => 'Service',
-                'etat' => 'État', 'date_acquisition' => 'Date acq.',
+                'code' => 'Code', 'compte' => 'Compte OHADA', 'designation' => 'Désignation',
+                'categorie' => 'Catégorie', 'nature' => 'Nature', 'domaine_libelle' => 'Domaine',
+                'secteur' => 'Secteur', 'service' => 'Service',
+                'etat' => 'État', 'date_acquisition' => 'Date acq.', 'date_mise_en_service' => 'Mise en service',
+                'reference_decision' => 'Réf. décision',
                 'valeur' => 'Valeur', 'amortissement' => 'Amortissement', 'vnc' => 'VNC',
             ];
-            $formats = ['valeur' => 'fcfa', 'amortissement' => 'fcfa', 'vnc' => 'fcfa', 'date_acquisition' => 'date', 'etat' => null];
-            $lignes = array_map(function ($a) {
+            $formats = ['valeur' => 'fcfa', 'amortissement' => 'fcfa', 'vnc' => 'fcfa',
+                'date_acquisition' => 'date', 'date_mise_en_service' => 'date', 'etat' => null];
+            $natures = ['incorporelle' => 'Incorporelle', 'corporelle' => 'Corporelle', 'financiere' => 'Financière'];
+            $lignes = array_map(function ($a) use ($natures) {
                 $a['etat'] = ['bon' => 'Bon', 'moyen' => 'Moyen', 'degrade' => 'Dégradé', 'hors_service' => 'Hors service'][$a['etat'] ?? ''] ?? $a['etat'];
+                $a['nature'] = $natures[$a['nature'] ?? ''] ?? $a['nature'];
                 return $a;
             }, $assets);
         } elseif ($type === 'maintenances') {

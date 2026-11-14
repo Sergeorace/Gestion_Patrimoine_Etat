@@ -63,6 +63,18 @@ class ValuationCalc
     }
 
     /**
+     * Dotation annuelle aux amortissements (OHADA : amortissement lineaire,
+     * plan predéfini sur la duree de vie). Retourne null si non determinable.
+     */
+    public static function dotationAnnuelle(?float $valeur, ?int $dureeVieMois, ?string $dateMiseEnService): ?float
+    {
+        if ($valeur === null || ! $dureeVieMois || $dureeVieMois <= 0 || ! $dateMiseEnService) {
+            return null;
+        }
+        return round(min((float) $valeur, ((float) $valeur / $dureeVieMois) * 12), 2);
+    }
+
+    /**
      * Regroupe des lignes (biens) par cle et calcule les sous-totaux.
      * Retourne [cle => ['nb' => int, 'valeur' => float, 'vnc' => float, 'lignes' => array]]
      */

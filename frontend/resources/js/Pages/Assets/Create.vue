@@ -9,12 +9,22 @@ const categories = ref([]), structures = ref([]), biens = ref([]);
 const f = ref({
   designation: '', categorie_id: '', type_specifique: 'mobilier',
   structure_id: '', site_id: '', date_acquisition: '', mode_acquisition: 'achat',
+  date_mise_en_service: '', reference_decision: '',
   valeur_acquisition: 0, description: '',
+  nature: 'corporelle', compte_comptable: '', immobilisation: true,
 });
 const err = ref(''), loading = ref(false);
 
 const TYPES = { immobilier: 'Immobilier', vehicule: 'Véhicule', informatique: 'Informatique', mobilier: 'Mobilier', autre: 'Autre' };
 const MODES = { achat: 'Achat', don: 'Don', transfert: 'Transfert', construction: 'Construction', recuperation: 'Récupération' };
+const NATURES = { incorporelle: 'Incorporelle', corporelle: 'Corporelle', financiere: 'Financière' };
+// Comptes OHADA (classe 2 - actif immobilise)
+const COMPTES_OHADA = [
+  ['21', 'Incorporelles'], ['22', 'Terrains'], ['231', 'Constructions'],
+  ['232', 'Installations techniques'], ['244', 'Matériel et outillage'],
+  ['245', 'Matériel de transport'], ['246', 'Matériel informatique'],
+  ['248', 'Autres immobilisations corporelles'], ['26', 'Participations'], ['27', 'Prêts'],
+];
 
 async function submit() {
   loading.value = true; err.value = '';
@@ -78,8 +88,35 @@ onMounted(async () => {
         <input v-model="f.date_acquisition" type="date" required class="champ">
       </div>
       <div>
+        <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Mise en service</label>
+        <input v-model="f.date_mise_en_service" type="date" class="champ" title="Début des dotations aux amortissements">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Réf. décision / marché</label>
+        <input v-model="f.reference_decision" class="champ" placeholder="N° arrêté, marché, bon de commande">
+      </div>
+      <div>
         <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Valeur d'acquisition (FCFA) *</label>
         <input v-model.number="f.valeur_acquisition" type="number" min="0" required class="champ">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Nature comptable</label>
+        <select v-model="f.nature" class="champ">
+          <option v-for="(lib, k) in NATURES" :key="k" :value="k">{{ lib }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Compte OHADA</label>
+        <select v-model="f.compte_comptable" class="champ">
+          <option value="">—</option>
+          <option v-for="[c, l] in COMPTES_OHADA" :key="c" :value="c">{{ c }} — {{ l }}</option>
+        </select>
+      </div>
+      <div class="flex items-end pb-1">
+        <label class="flex items-center gap-2 text-sm cursor-pointer">
+          <input v-model="f.immobilisation" type="checkbox" class="accent-[#176045]">
+          Immobilisation (sinon charge / consommation)
+        </label>
       </div>
       <div class="md:col-span-2">
         <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Description</label>

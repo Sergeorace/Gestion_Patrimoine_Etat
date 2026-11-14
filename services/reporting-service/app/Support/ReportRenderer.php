@@ -152,7 +152,7 @@ class ReportRenderer
             [$b['region'] ?? '', $b['prefecture'] ?? '', $b['commune'] ?? '', $b['domaine_libelle'] ?? '', $b['secteur'] ?? '', $b['code'] ?? '']);
 
         $html = '<table><thead><tr>
-            <th>Code</th><th>Désignation</th><th>Catégorie</th><th>Domaine</th><th>Secteur</th>
+            <th>Code</th><th>Compte</th><th>Désignation</th><th>Catégorie</th><th>Domaine</th><th>Secteur</th>
             <th>Service</th><th>État</th><th>Date acq.</th><th class="num">Valeur (FCFA)</th>';
         if ($avecVnc) $html .= '<th class="num">Amort. (FCFA)</th><th class="num">VNC (FCFA)</th>';
         $html .= '</tr></thead><tbody>';
@@ -161,6 +161,7 @@ class ReportRenderer
             $etat = ['bon' => 'Bon', 'moyen' => 'Moyen', 'degrade' => 'Dégradé', 'hors_service' => 'Hors service'][$r['etat'] ?? ''] ?? self::np($r['etat']);
             $h = '<tr>
                 <td>'.self::np($r['code']).'</td>
+                <td>'.self::np($r['compte'] ?? null).'</td>
                 <td>'.self::np($r['designation']).'</td>
                 <td>'.self::np($r['categorie']).'</td>
                 <td>'.self::np($r['domaine_libelle']).'</td>
@@ -176,8 +177,8 @@ class ReportRenderer
             return $h.'</tr>';
         };
 
-        // 8 colonnes texte puis les colonnes de montants (valeur, amort., VNC)
-        $colsTexte = 8;
+        // 9 colonnes texte puis les colonnes de montants (valeur, amort., VNC)
+        $colsTexte = 9;
         $montants = function (array $lignes) use ($avecVnc) {
             $somme = fn (string $k) => array_sum(array_map(fn ($l) => (float) ($l[$k] ?? 0), $lignes));
             $h = '<td class="num">'.self::fmt($somme('valeur')).'</td>';

@@ -46,6 +46,16 @@ class ValuationCalcTest extends TestCase
         $this->assertNull($r['vnc']);
     }
 
+    public function test_dotation_annuelle_lineaire(): void
+    {
+        // 120 000 FCFA sur 120 mois -> 12 000 FCFA/an
+        $this->assertEquals(12000, ValuationCalc::dotationAnnuelle(120000, 120, '2020-01-01'));
+        // Plafonnee a la valeur du bien
+        $this->assertEquals(50000, ValuationCalc::dotationAnnuelle(50000, 6, '2020-01-01'));
+        // Non determinable -> null
+        $this->assertNull(ValuationCalc::dotationAnnuelle(50000, null, '2020-01-01'));
+    }
+
     public function test_totaux_et_groupes(): void
     {
         $lignes = [

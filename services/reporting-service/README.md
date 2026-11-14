@@ -76,6 +76,32 @@ Données de démonstration seedées (`tools/seed_demo.sql` — 9 biens, 4 struct
 - `docs/exemples/rapport-valeurs-vnc.xlsx`
 - `docs/exemples/rapport-maintenances.pdf`
 
+## Normes comptables publiques appliquées
+
+Alignement sur le cadre applicable aux États membres UEMOA
+(directive 2012-03 « comptabilité des matières », SYSCOHADA/OHADA,
+référentiels IPSAS) :
+
+- **Registre des immobilisations** : chaque bien porte un `code_inventaire`
+  unique (non réutilisable, RG-01), un `compte_comptable` OHADA (classe 2 :
+  21 incorporelles, 22-24 corporelles, 25-27 financières), une `nature`
+  (incorporelle / corporelle / financière) et un `immobilisation` booléen
+  (les biens sous le seuil d'importance significative sont des charges).
+- **Coût historique** : valorisation au coût d'acquisition (art. 36 OHADA),
+  jamais réévaluée unilatéralement.
+- **Dotations aux amortissements** : méthode linéaire obligatoire, à compter
+  de la `date_mise_en_service` (à défaut date d'acquisition) ; plancher VNC 0.
+- **Traçabilité des acquisitions** : `reference_decision` (n° d'arrêté,
+  marché ou bon de commande).
+- **Sorties définitives** : les motifs UEMOA (consommation, transfert,
+  réforme, destruction, perte, vol, manquant d'inventaire) sont gérés par
+  movement-service ; un bien sorti reste archivé pour audit (RG-04).
+- **Inventaire permanent** : campagnes + constats par bien (inventaire
+  tournant), écarts d'état et de quantité.
+
+Référentiels : `tools/seed_normes.sql` (comptes OHADA par catégorie,
+motifs de sortie, champs normes sur les biens de démonstration).
+
 ## Tests
 
 `tests/Unit/ValuationCalcTest.php` couvre les calculs de VNC, amortissement,

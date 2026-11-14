@@ -128,10 +128,12 @@ class ReportDataService
             $cat = $categories[$b->categorie_id ?? ''] ?? null;
             $struct = $structures[$b->structure_id ?? ''] ?? null;
 
+            // OHADA : les dotations courent a partir de la mise en service
+            // (a defaut, date d'acquisition).
             $val = ValuationCalc::compute(
                 isset($b->valeur_acquisition) ? (float) $b->valeur_acquisition : null,
                 $cat->duree_vie_mois ?? null,
-                $b->date_acquisition ?? null,
+                $b->date_mise_en_service ?? $b->date_acquisition ?? null,
                 $asOf
             );
 
@@ -140,6 +142,10 @@ class ReportDataService
                 'code' => $b->code_inventaire ?? 'n.p.',
                 'designation' => $b->designation ?? 'n.p.',
                 'categorie' => $cat->libelle ?? 'n.p.',
+                'compte' => $b->compte_comptable ?? $cat->compte_comptable ?? null,
+                'nature' => $b->nature ?? $cat->nature ?? 'corporelle',
+                'immobilisation' => (bool) ($b->immobilisation ?? true),
+                'reference_decision' => $b->reference_decision ?? null,
                 'type' => $b->type_specifique ?? null,
                 'domaine' => $b->domaine ?? null,
                 'domaine_libelle' => self::DOMAINES[$b->domaine ?? ''] ?? ($b->domaine ?: 'n.p.'),
@@ -153,6 +159,7 @@ class ReportDataService
                 'etat' => $b->etat ?? null,
                 'statut' => $b->statut ?? null,
                 'date_acquisition' => $b->date_acquisition ?? null,
+                'date_mise_en_service' => $b->date_mise_en_service ?? null,
                 'valeur' => $val['acquisition'],
                 'amortissement' => $val['amortissement'],
                 'vnc' => $val['vnc'],
