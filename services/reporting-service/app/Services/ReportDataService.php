@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Http;
  */
 class ReportDataService
 {
-    public const TYPES = ['patrimoine', 'valeurs-vnc', 'maintenances', 'inventaires'];
+    public const TYPES = ['patrimoine', 'valeurs-vnc', 'maintenances', 'inventaires', 'etat-immobilisations'];
 
     public const DOMAINES = [
         'domaine_public_immobilier' => 'Domaine public immobilier',
@@ -160,6 +160,7 @@ class ReportDataService
                 'statut' => $b->statut ?? null,
                 'date_acquisition' => $b->date_acquisition ?? null,
                 'date_mise_en_service' => $b->date_mise_en_service ?? null,
+                'duree_vie_mois' => $cat->duree_vie_mois ?? null,
                 'valeur' => $val['acquisition'],
                 'amortissement' => $val['amortissement'],
                 'vnc' => $val['vnc'],
@@ -264,6 +265,145 @@ class ReportDataService
             ];
         }
         return $rows;
+    }
+
+    // ------------------------------------------------------------------
+    // Etat des immobilisations (IPSAS / etat financier public)
+    // Ouverture -> acquisitions, dotations, sorties -> cloture.
+    // ------------------------------------------------------------------
+
+    public function etatImmobilisations(array $f): array
+    {
+        $debut = $f['du'] ?: date('Y-01-01');
+        $fin = $f['au'] ?: date('Y-m-d');
+        $avantDebut = date('Y-m-d', strtotime($debut.' -1 day'));
+
+        // Univers des biens : filtres geo/domaine/service appliques,
+        // sans filtre de dates (gere ici pour l'etat).
+        $fUniverse = $f;
+        $fUniverse['du'] = null;
+        $fUniverse['au'] = null;
+        $assets = $this->assets($fUniverse);
+        $parId = collect($assets)->keyBy(fn ($r) => (string) $r['id']);
+
+        // Toutes les sorties validees (permet de savoir si un bien est sorti
+        // avant la periode, pendant, ou apres).
+        $mvs = $this->fetchAll('MOVEMENT_SERVICE_URL', '/api/v1/movements', ['type' => 'sortie']);
+        $sortieLe = [];   // bien_id => date de sortie la plus recente
+        foreach ($mvs as $m) {
+            if (! in_array($m->statut ?? '', ['validee', 'executee'], true)) continue;
+            $d = substr((string) ($m->date_effet ?? $m->date_validation ?? $m->created_at ?? ''), 0, 10);
+            if (! $d || ($sortieLe[$m->bien_id] ?? '') >= $d) continue;
+            $sortieLe[$m->bien_id] = $d;
+        }
+        $sortiesPeriode = array_filter($mvs, function ($m) use ($debut, $fin, $sortieLe) {
+            if (! in_array($m->statut ?? '', ['validee', 'executee'], true)) return false;
+            $d = $sortieLe[$m->bien_id] ?? null;
+            return $d && $d >= $debut && $d <= $fin;
+        });
+
+        $motifs = collect($this->fetchAll('MOVEMENT_SERVICE_URL', '/api/v1/movements/motifs-sortie'))->keyBy('id');
+
+        $vncAt = fn (array $r, string $asOf): array => ValuationCalc::compute(
+            $r['valeur'] !== null ? (float) $r['valeur'] : null,
+            $r['duree_vie_mois'] ?? null,
+            $r['date_mise_en_service'] ?? $r['date_acquisition'] ?? null,
+            $asOf
+        );
+
+        // ---- Ouverture / cloture ----
+        $ouv = ['brut' => 0.0, 'amort' => 0.0, 'vnc' => 0.0];
+        $clot = ['brut' => 0.0, 'amort' => 0.0, 'vnc' => 0.0];
+        $acquisitions = [];
+        $dotations = [];
+        $nbCloture = 0;
+
+        foreach ($assets as $r) {
+            $acq = (string) substr((string) $r['date_acquisition'], 0, 10);
+            $sortie = $sortieLe[$r['id']] ?? null;
+            if (! $sortie || $sortie > $fin) {
+                // Bien present a la cloture
+                if ($acq <= $fin) {
+                    $v = $vncAt($r, $fin);
+                    $clot['brut'] += (float) $r['valeur'];
+                    $clot['amort'] += (float) $r['valeur'] - (float) ($v['vnc'] ?? 0);
+                    $clot['vnc'] += (float) ($v['vnc'] ?? 0);
+                    $nbCloture++;
+                }
+            }
+            if ($acq < $debut && (! $sortie || $sortie > $avantDebut)) {
+                $v = $vncAt($r, $avantDebut);
+                $ouv['brut'] += (float) $r['valeur'];
+                $ouv['amort'] += (float) $r['valeur'] - (float) ($v['vnc'] ?? 0);
+                $ouv['vnc'] += (float) ($v['vnc'] ?? 0);
+            }
+            if ($acq >= $debut && $acq <= $fin) {
+                $acquisitions[] = [
+                    'date' => $r['date_acquisition'], 'code' => $r['code'], 'designation' => $r['designation'],
+                    'compte' => $r['compte'], 'valeur' => $r['valeur'],
+                ];
+            }
+
+            // ---- Dotations de la periode (mensualites OHADA) ----
+            if (! ($r['immobilisation'] ?? true) || ! $r['duree_vie_mois'] || $r['valeur'] === null) continue;
+            $debutService = $r['date_mise_en_service'] ?? $r['date_acquisition'];
+            if (! $debutService) continue;
+            $duree = (int) $r['duree_vie_mois'];
+            $mensuel = (float) $r['valeur'] / $duree;
+            $finService = $sortie && $sortie <= $fin ? $sortie : $fin;
+            if ($finService < $debut) continue;
+
+            $amortAvant = (float) ($vncAt($r, $avantDebut)['amortissement'] ?? 0);
+            $reste = max(0.0, (float) $r['valeur'] - $amortAvant);
+            $total = 0.0;
+            $nbMois = 0;
+            $debutMois = max($debut, substr($debutService, 0, 7).'-01');
+            $cur = new \DateTimeImmutable($debutMois);
+            $finM = new \DateTimeImmutable(substr($finService, 0, 7).'-01');
+            while ($cur <= $finM && $total < $reste) {
+                $total += min($mensuel, $reste - $total);
+                $nbMois++;
+                $cur = $cur->modify('+1 month');
+            }
+            if ($total > 0.005) {
+                $dotations[] = [
+                    'code' => $r['code'], 'designation' => $r['designation'], 'compte' => $r['compte'],
+                    'nb_mois' => $nbMois,
+                    'dotation' => round($total, 2),
+                ];
+            }
+        }
+
+        // ---- Sorties de la periode ----
+        $lignesSorties = [];
+        foreach ($sortiesPeriode as $m) {
+            $r = $parId->get((string) $m->bien_id);
+            if (! $r) continue;
+            $dSortie = $sortieLe[$m->bien_id];
+            $v = $vncAt($r, $dSortie);
+            $lignesSorties[] = [
+                'date' => $dSortie,
+                'reference' => $m->reference ?? 'n.p.',
+                'code' => $r['code'], 'designation' => $r['designation'], 'compte' => $r['compte'],
+                'motif' => $motifs->get($m->motif_sortie_id)->libelle ?? ($m->motif ?? 'n.p.'),
+                'vnc_sortie' => $v['vnc'],
+                'valeur_sortie' => $m->valeur_sortie ?? null,
+            ];
+        }
+
+        return [
+            'debut' => $debut, 'fin' => $fin,
+            'ouverture' => $ouv,
+            'acquisitions' => ['total' => array_sum(array_column($acquisitions, 'valeur')), 'lignes' => $acquisitions],
+            'dotations' => ['total' => array_sum(array_column($dotations, 'dotation')), 'lignes' => $dotations],
+            'sorties' => [
+                'vnc' => array_sum(array_map(fn ($l) => (float) $l['vnc_sortie'], $lignesSorties)),
+                'cession' => array_sum(array_map(fn ($l) => (float) ($l['valeur_sortie'] ?? 0), $lignesSorties)),
+                'lignes' => $lignesSorties,
+            ],
+            'cloture' => $clot,
+            'nb_biens' => $nbCloture,
+        ];
     }
 
     // ------------------------------------------------------------------

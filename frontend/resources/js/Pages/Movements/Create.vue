@@ -5,13 +5,10 @@ import AppLayout from '../../Layouts/AppLayout.vue';
 import { api } from '../../api';
 import { loadAuth, peutAction } from '../../authz';
 
-const biens = ref([]), structures = ref([]);
-const f = ref({ type: 'affectation', bien_id: '', structure_dest_id: '', motif: '', motif_sortie_id: '', date_effet: '' });
+const biens = ref([]), structures = ref([]), motifs = ref([]);
+const f = ref({ type: 'affectation', bien_id: '', structure_dest_id: '', motif: '', motif_sortie_id: '', valeur_sortie: '', date_effet: '' });
 const err = ref(''), loading = ref(false);
 const TYPES = { affectation: 'Affectation', transfert: 'Transfert', entree: 'Entrée', sortie: 'Sortie' };
-const MOTIFS_SORTIE = [
-  ['reforme', 'Réforme'], ['cession', 'Cession'], ['destruction', 'Destruction'], ['perte', 'Perte'],
-];
 
 async function submit() {
   loading.value = true; err.value = '';
@@ -19,6 +16,7 @@ async function submit() {
     const payload = { ...f.value };
     if (!payload.date_effet) delete payload.date_effet;
     if (!payload.motif_sortie_id) delete payload.motif_sortie_id;
+    if (!payload.valeur_sortie) delete payload.valeur_sortie;
     await api.post('/movements', payload);
     router.visit('/affectations');
   } catch (e) { err.value = e.message; } finally { loading.value = false; }
@@ -28,9 +26,12 @@ onMounted(async () => {
   await loadAuth();
   if (! peutAction('mouvement.creer')) { router.visit('/affectations'); return; }
   try {
-    const [b, s] = await Promise.all([api.get('/assets?per_page=100'), api.get('/organisation/structures')]);
+    const [b, s, m] = await Promise.all([
+      api.get('/assets?per_page=100'), api.get('/organisation/structures'), api.get('/movements/motifs-sortie'),
+    ]);
     biens.value = b.data ?? b ?? [];
     structures.value = Array.isArray(s) ? s : (s.data ?? []);
+    motifs.value = Array.isArray(m) ? m : (m.data ?? []);
   } catch (e) { err.value = e.message; }
 });
 </script>
@@ -53,7 +54,7 @@ onMounted(async () => {
           <option v-for="b in biens" :key="b.id" :value="b.id">{{ b.code_inventaire }} — {{ b.designation }}</option>
         </select>
       </div>
-      <div v-if="f.type !== 'entree'">
+      <div v-if="f.type !== 'entree' && f.type !== 'sortie'">
         <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Structure de destination *</label>
         <select v-model="f.structure_dest_id" required class="champ">
           <option value="" disabled>Sélectionner…</option>
@@ -61,11 +62,13 @@ onMounted(async () => {
         </select>
       </div>
       <div v-if="f.type === 'sortie'">
-        <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Motif de sortie</label>
-        <select v-model="f.motif_sortie_id" class="champ">
-          <option value="">—</option>
-          <option v-for="[v, lib] in MOTIFS_SORTIE" :key="v" :value="v">{{ lib }}</option>
+        <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Motif de sortie *</label>
+        <select v-model="f.motif_sortie_id" required class="champ">
+          <option value="" disabled>Sélectionner…</option>
+          <option v-for="mo in motifs" :key="mo.id" :value="mo.id">{{ mo.libelle }}</option>
         </select>
+        <label class="block text-xs font-medium mt-3 mb-1" style="color: var(--discret);">Valeur de sortie (FCFA)</label>
+        <input v-model="f.valeur_sortie" type="number" min="0" step="1" class="champ" placeholder="Prix de cession, indemnisation…">
       </div>
       <div>
         <label class="block text-xs font-medium mb-1" style="color: var(--discret);">Date d'effet</label>

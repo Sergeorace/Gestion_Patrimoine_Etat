@@ -43,7 +43,8 @@ class ValuationController extends Controller
         $biens = collect();
         try {
             $r = Http::timeout(15)->withToken(env('SERVICE_TOKEN', ''))->get(env('ASSET_SERVICE_URL').'/api/v1/assets', ['per_page' => 5000]);
-            $biens = collect($r->json('data') ?? []);
+            $rows = $r->json('data.data') ?? $r->json('data') ?? [];
+            $biens = collect($rows)->map(fn ($b) => (object) $b);
         } catch (\Throwable $e) {
             return $this->error('UPSTREAM', 'Asset-service indisponible.', 502);
         }
@@ -52,12 +53,14 @@ class ValuationController extends Controller
         $categories = collect();
         try {
             $r = Http::timeout(10)->withToken(env('SERVICE_TOKEN', ''))->get(env('ORGANISATION_SERVICE_URL').'/api/v1/categories', ['arbre' => 1]);
-            $categories = collect($r->json('data') ?? [])->keyBy('id');
+            $cats = $r->json('data.data') ?? $r->json('data') ?? [];
+            $categories = collect($cats)->map(fn ($c) => (object) $c)->keyBy('id');
         } catch (\Throwable) {}
 
         $crees = 0;
         foreach ($biens as $bien) {
             if (in_array($bien->statut, ['sorti'], true)) continue;
+            if (array_key_exists('immobilisation', (array) $bien) && ! $bien->immobilisation) continue; // charges, hors registre
             $cat = $categories->get($bien->categorie_id);
             $duree = $cat->duree_vie_mois ?? 120; // defaut 10 ans
             $methode = $cat->methode_amortissement ?? 'lineaire';
@@ -73,7 +76,11 @@ class ValuationController extends Controller
                 $taux = 1.25 / ($duree / 12); // coefficient 1.25
                 $dotation = min($base, $base * $taux);
             } else {
-                $dotation = min($base, $acquisition / ($duree / 12));
+                // OHADA : dotation lineaire, prorata temporis des la mise en service
+                $mensuel = $acquisition / $duree;
+                $debut = ! empty($bien->date_mise_en_service) ? $bien->date_mise_en_service : $bien->date_acquisition;
+                $moisExercice = self::moisDeService($debut, $exercice);
+                $dotation = min($base, $mensuel * $moisExercice);
             }
 
             DB::table('amortissements')->updateOrInsert(
@@ -126,6 +133,20 @@ class ValuationController extends Controller
             'total_amortissements' => DB::table('amortissements')->sum('dotation'),
             'nombre_biens' => DB::table('valorisations')->distinct('bien_id')->count('bien_id'),
         ]);
+    }
+
+    /**
+     * Nombre de mois de service du bien pendant l'exercice donne
+     * (prorata temporis OHADA : la dotation demarre a la mise en service).
+     */
+    private static function moisDeService(?string $debut, int $exercice): int
+    {
+        if (! $debut) return 12;
+        $d = new \DateTimeImmutable(substr($debut, 0, 10));
+        $y = (int) $d->format('Y');
+        if ($y > $exercice) return 0;      // pas encore en service
+        if ($y < $exercice) return 12;     // exercice complet
+        return max(0, 13 - (int) $d->format('n')); // prorata annee de mise en service
     }
 
     private function publish(string $event, array $payload): void

@@ -274,6 +274,64 @@ class ReportRenderer
         return $html;
     }
 
+    /** Etat des immobilisations : ouverture -> mouvements -> cloture. */
+    public static function etatImmobilisations(array $e): string
+    {
+        $fmtD = fn ($d) => \Carbon\Carbon::parse($d)->format('d/m/Y');
+        $periode = 'Période du '.$fmtD($e['debut']).' au '.$fmtD($e['fin']);
+
+        $o = $e['ouverture'];
+        $c = $e['cloture'];
+        $a = $e['acquisitions'];
+        $d = $e['dotations'];
+        $s = $e['sorties'];
+
+        $html = '<h2>État des immobilisations</h2><p style="color:#6b7280;font-size:9pt;margin:0 0 3mm;">'.$periode.' — '.$e['nb_biens'].' bien(s) à la clôture</p>';
+
+        // Tableau de synthese mouvemente
+        $html .= '<table><thead><tr>
+            <th>Poste</th><th class="num">Valeur brute (FCFA)</th><th class="num">Amort. cumulé (FCFA)</th><th class="num">VNC (FCFA)</th></tr></thead><tbody>'
+            .'<tr><td>Valeur nette à l\'ouverture</td><td class="num">'.self::fmt($o['brut']).'</td><td class="num">'.self::fmt($o['amort']).'</td><td class="num">'.self::fmt($o['vnc']).'</td></tr>'
+            .'<tr><td>&nbsp;&nbsp;Acquisitions de la période ('.count($a['lignes']).')</td><td class="num">+'.self::fmt($a['total']).'</td><td></td><td></td></tr>'
+            .'<tr><td>&nbsp;&nbsp;Dotations aux amortissements</td><td></td><td class="num">+'.self::fmt($d['total']).'</td><td class="num">−'.self::fmt($d['total']).'</td></tr>'
+            .'<tr><td>&nbsp;&nbsp;Sorties (VNC sortie)</td><td class="num">−'.self::fmt($s['vnc']).'</td><td></td><td class="num">−'.self::fmt($s['vnc']).'</td></tr>'
+            .'<tr class="total-general"><td>Valeur nette à la clôture</td><td class="num">'.self::fmt($c['brut']).'</td><td class="num">'.self::fmt($c['amort']).'</td><td class="num">'.self::fmt($c['vnc']).'</td></tr>'
+            .'</tbody></table>';
+
+        // Acquisitions
+        if ($a['lignes']) {
+            $html .= '<h3>Acquisitions de la période</h3><table><thead><tr>
+                <th>Date</th><th>Code</th><th>Désignation</th><th>Compte</th><th class="num">Valeur (FCFA)</th></tr></thead><tbody>';
+            foreach ($a['lignes'] as $l) {
+                $html .= '<tr><td class="centrer">'.self::dateFr($l['date']).'</td><td>'.self::np($l['code']).'</td><td>'.self::np($l['designation']).'</td><td>'.self::np($l['compte']).'</td><td class="num">'.self::fmt($l['valeur']).'</td></tr>';
+            }
+            $html .= '</tbody></table>';
+        }
+
+        // Dotations par bien
+        if ($d['lignes']) {
+            $html .= '<h3>Dotations aux amortissements</h3><table><thead><tr>
+                <th>Code</th><th>Désignation</th><th>Compte</th><th class="centrer">Mois</th><th class="num">Dotation (FCFA)</th></tr></thead><tbody>';
+            foreach ($d['lignes'] as $l) {
+                $html .= '<tr><td>'.self::np($l['code']).'</td><td>'.self::np($l['designation']).'</td><td>'.self::np($l['compte']).'</td><td class="centrer">'.$l['nb_mois'].'</td><td class="num">'.self::fmt($l['dotation']).'</td></tr>';
+            }
+            $html .= '<tr class="sous-total"><td colspan="4">Total dotations</td><td class="num">'.self::fmt($d['total']).'</td></tr></tbody></table>';
+        }
+
+        // Sorties
+        if ($s['lignes']) {
+            $html .= '<h3>Sorties définitives de la période</h3><table><thead><tr>
+                <th>Date</th><th>Référence</th><th>Code</th><th>Désignation</th><th>Motif</th>
+                <th class="num">VNC sortie (FCFA)</th><th class="num">Valeur de cession (FCFA)</th></tr></thead><tbody>';
+            foreach ($s['lignes'] as $l) {
+                $html .= '<tr><td class="centrer">'.self::dateFr($l['date']).'</td><td>'.self::np($l['reference']).'</td><td>'.self::np($l['code']).'</td><td>'.self::np($l['designation']).'</td><td>'.self::np($l['motif']).'</td><td class="num">'.self::fmt($l['vnc_sortie']).'</td><td class="num">'.self::fmt($l['valeur_sortie']).'</td></tr>';
+            }
+            $html .= '<tr class="sous-total"><td colspan="5">Totaux</td><td class="num">'.self::fmt($s['vnc']).'</td><td class="num">'.self::fmt($s['cession']).'</td></tr></tbody></table>';
+        }
+
+        return $html;
+    }
+
     /** Assemble le document HTML complet. */
     public static function render(string $titre, string $sectionHtml, array $filtres, string $user, string $quand, bool $paysage = false): string
     {

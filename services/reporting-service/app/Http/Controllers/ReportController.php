@@ -117,6 +117,7 @@ class ReportController extends Controller
             'valeurs-vnc' => 'Valeurs et VNC',
             'maintenances' => 'Maintenances — historique et coûts',
             'inventaires' => 'Inventaires — écarts constatés',
+            'etat-immobilisations' => 'État des immobilisations',
         ][$type];
 
         $assets = null;
@@ -182,6 +183,42 @@ class ReportController extends Controller
             $lignes = array_map(fn ($l) => $l + ['type' => ['preventive' => 'Préventive', 'curative' => 'Corrective', 'panne' => 'Panne'][$l['type']] ?? $l['type'],
                 'statut' => ['declaree' => 'Déclarée', 'planifiee' => 'Planifiée', 'en_cours' => 'En cours', 'terminee' => 'Terminée', 'annulee' => 'Annulée'][$l['statut']] ?? $l['statut']], $lignes);
             $paysage = false;
+        } elseif ($type === 'etat-immobilisations') {
+            // Etat financier des immobilisations (IPSAS) : periode = du/au ou annee courante
+            $etat = $data->etatImmobilisations($f);
+            if (! $etat['nb_biens'] && ! $etat['acquisitions']['lignes'] && ! $etat['sorties']['lignes']) {
+                return $this->error('EMPTY', 'Aucune immobilisation ne correspond à ces filtres.', 422);
+            }
+            $o = $etat['ouverture']; $c = $etat['cloture'];
+            $kpis = [
+                'VNC ouverture' => $o['vnc'], 'Dotations' => $etat['dotations']['total'],
+                'VNC clôture' => $c['vnc'], 'Biens à la clôture' => $etat['nb_biens'],
+            ];
+            $sectionHtml = ReportRenderer::etatImmobilisations($etat);
+            $nomFeuille = 'Etat immobilisations';
+            $colonnes = [
+                'type' => 'Mouvement', 'date' => 'Date', 'reference' => 'Référence',
+                'code' => 'Code', 'designation' => 'Désignation', 'compte' => 'Compte',
+                'motif' => 'Motif / détail', 'montant' => 'Montant (FCFA)',
+            ];
+            $lignes = [];
+            foreach ($etat['acquisitions']['lignes'] as $l) {
+                $lignes[] = ['type' => 'Acquisition', 'date' => $l['date'], 'reference' => null,
+                    'code' => $l['code'], 'designation' => $l['designation'], 'compte' => $l['compte'],
+                    'motif' => 'Acquisition', 'montant' => $l['valeur']];
+            }
+            foreach ($etat['dotations']['lignes'] as $l) {
+                $lignes[] = ['type' => 'Dotation', 'date' => null, 'reference' => null,
+                    'code' => $l['code'], 'designation' => $l['designation'], 'compte' => $l['compte'],
+                    'motif' => 'Dotation '.$l['nb_mois'].' mois', 'montant' => -$l['dotation']];
+            }
+            foreach ($etat['sorties']['lignes'] as $l) {
+                $lignes[] = ['type' => 'Sortie', 'date' => $l['date'], 'reference' => $l['reference'],
+                    'code' => $l['code'], 'designation' => $l['designation'], 'compte' => $l['compte'],
+                    'motif' => $l['motif'], 'montant' => -($l['vnc_sortie'] ?? 0)];
+            }
+            $formats = ['date' => 'date', 'montant' => 'fcfa'];
+            $paysage = true;
         } else { // inventaires
             $lignes = $data->inventaires($f);
             if (! $lignes) {

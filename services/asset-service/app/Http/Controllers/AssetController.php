@@ -53,9 +53,9 @@ class AssetController extends Controller
         if (! $bien) return $this->error('NOT_FOUND', 'Bien introuvable.', 404);
 
         $bien->specifique = match ($bien->type_specifique) {
-            'immobilier' => DB::table('specifiques_immobiliers')->find($id),
-            'vehicule' => DB::table('specifiques_vehicules')->find($id),
-            'informatique' => DB::table('specifiques_informatique')->find($id),
+            'immobilier' => DB::table('specifiques_immobiliers')->where('bien_id', $id)->first(),
+            'vehicule' => DB::table('specifiques_vehicules')->where('bien_id', $id)->first(),
+            'informatique' => DB::table('specifiques_informatique')->where('bien_id', $id)->first(),
             default => null,
         };
         $bien->photos = DB::table('photos_biens')->where('bien_id', $id)->get();
@@ -173,12 +173,18 @@ class AssetController extends Controller
     public function affecter(Request $request, string $id)
     {
         $d = $request->validate([
-            'structure_id' => 'required|uuid',
+            'structure_id' => 'required_unless:statut,sorti|nullable|uuid',
             'site_id' => 'nullable|uuid',
             'localisation_id' => 'nullable|uuid',
             'statut' => 'required|in:disponible,affecte,en_maintenance,sorti',
         ]);
-        DB::table('biens')->where('id', $id)->update($d + ['updated_at' => now()]);
+        // Une sortie conserve la structure d'origine pour l'audit : on ne
+        // reecrit les rattachements que s'ils sont fournis.
+        $maj = ['statut' => $d['statut'], 'updated_at' => now()];
+        foreach (['structure_id', 'site_id', 'localisation_id'] as $f) {
+            if (array_key_exists($f, $d) && $d[$f] !== null) $maj[$f] = $d[$f];
+        }
+        DB::table('biens')->where('id', $id)->update($maj);
         return $this->ok(DB::table('biens')->find($id));
     }
 
@@ -191,6 +197,57 @@ class AssetController extends Controller
         ]);
         DB::table('biens')->where('id', $id)->update($d + ['updated_at' => now()]);
         return $this->ok(DB::table('biens')->find($id));
+    }
+
+    /** GET /api/v1/assets/{id}/fiche - fiche de stock (grand livre par bien) :
+     *  fiche bien + mouvements + valorisation historique. */
+    public function fiche(Request $request, string $id)
+    {
+        $bien = DB::table('biens')->whereNull('deleted_at')->find($id);
+        if (! $bien) return $this->error('NOT_FOUND', 'Bien introuvable.', 404);
+        $bien->specifique = match ($bien->type_specifique) {
+            'immobilier' => DB::table('specifiques_immobiliers')->where('bien_id', $id)->first(),
+            'vehicule' => DB::table('specifiques_vehicules')->where('bien_id', $id)->first(),
+            'informatique' => DB::table('specifiques_informatique')->where('bien_id', $id)->first(),
+            default => null,
+        };
+        $bien->photos = DB::table('photos_biens')->where('bien_id', $id)->get();
+
+        $svc = fn () => Http::timeout(5)->withToken(env('SERVICE_TOKEN', ''));
+
+        // Mouvements du bien (entrees, affectations, sorties) - ordre chronologique
+        $mouvements = collect();
+        try {
+            $r = $svc()->get(env('MOVEMENT_SERVICE_URL').'/api/v1/movements', ['bien_id' => $id, 'per_page' => 100]);
+            if ($r->successful()) $mouvements = collect($r->json('data.data') ?? $r->json('data') ?? []);
+        } catch (\Throwable) {}
+
+        // Historique de valorisation du bien
+        $valorisation = null;
+        try {
+            $r = $svc()->get(env('VALUATION_SERVICE_URL')."/api/v1/valorisation/$id");
+            if ($r->successful()) $valorisation = $r->json('data');
+        } catch (\Throwable) {}
+
+        // Interventions de maintenance du bien
+        $interventions = collect();
+        try {
+            $r = $svc()->get(env('MAINTENANCE_SERVICE_URL').'/api/v1/interventions', ['bien_id' => $id, 'per_page' => 100]);
+            if ($r->successful()) $interventions = collect($r->json('data.data') ?? $r->json('data') ?? []);
+        } catch (\Throwable) {}
+
+        // Documents joints au bien
+        $documents = collect();
+        try {
+            $r = $svc()->get(env('DOCUMENT_SERVICE_URL').'/api/v1/documents', ['entite_type' => 'bien', 'entite_type_id' => $id, 'per_page' => 100]);
+            if ($r->successful()) $documents = collect($r->json('data.data') ?? $r->json('data') ?? []);
+        } catch (\Throwable) {}
+
+        $bien->mouvements = $mouvements->sortBy(fn ($m) => $m->date_effet ?? $m->created_at ?? '')->values();
+        $bien->valorisation = $valorisation;
+        $bien->interventions = $interventions;
+        $bien->documents = $documents;
+        return $this->ok($bien);
     }
 
     /** GET /api/v1/assets/{id}/qrcode.svg */

@@ -55,6 +55,7 @@ const RAPPORTS = [
   { type: 'valeurs-vnc', titre: 'Valeurs et VNC', desc: 'Acquisition, amortissements et valeur nette comptable.' },
   { type: 'maintenances', titre: 'Maintenances', desc: 'Historique et coûts des interventions.' },
   { type: 'inventaires', titre: 'Inventaires', desc: 'Écarts constatés par campagne.' },
+  { type: 'etat-immobilisations', titre: 'État des immobilisations', desc: 'Ouverture, acquisitions, dotations, sorties et clôture (IPSAS).' },
 ];
 const TYPES = Object.fromEntries(RAPPORTS.map(t => ['export_' + t.type, t.titre]));
 

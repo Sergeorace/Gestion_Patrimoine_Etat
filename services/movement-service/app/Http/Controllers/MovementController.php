@@ -38,10 +38,11 @@ class MovementController extends Controller
         $d = $request->validate([
             'type' => 'required|in:entree,affectation,transfert,sortie',
             'bien_id' => 'required|uuid',
-            'structure_dest_id' => 'required_unless:type,entree|uuid',
+            'structure_dest_id' => 'required_unless:type,entree,sortie|uuid',
             'site_dest_id' => 'nullable|uuid',
             'motif' => 'nullable|string|max:2000',
-            'motif_sortie_id' => 'nullable|uuid',
+            'motif_sortie_id' => 'required_if:type,sortie|nullable|uuid|exists:motifs_sortie,id',
+            'valeur_sortie' => 'nullable|numeric|min:0',
             'date_effet' => 'nullable|date',
             'pieces' => 'nullable|array',
         ]);
@@ -77,6 +78,7 @@ class MovementController extends Controller
             'site_dest_id' => $d['site_dest_id'] ?? null,
             'motif' => $d['motif'] ?? null,
             'motif_sortie_id' => $d['motif_sortie_id'] ?? null,
+            'valeur_sortie' => $d['valeur_sortie'] ?? null,
             'pieces' => isset($d['pieces']) ? json_encode($d['pieces']) : null,
             'demandeur_id' => $claims['sub'] ?? null,
             'niveau_validation' => 1,
@@ -191,7 +193,7 @@ class MovementController extends Controller
     {
         try {
             $r = Http::timeout(5)->withToken($this->serviceToken())->get(env('ASSET_SERVICE_URL')."/api/v1/assets/$id");
-            return $r->successful() ? $r->json('data') : null;
+            return $r->successful() ? (object) $r->json('data') : null;
         } catch (\Throwable) { return null; }
     }
 

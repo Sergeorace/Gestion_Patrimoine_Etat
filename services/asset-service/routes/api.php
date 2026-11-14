@@ -11,6 +11,7 @@ Route::middleware(['jwt', 'permission:bien.lire', 'throttle:api'])->group(functi
     Route::get('assets', [AssetController::class, 'index']);
     Route::get('assets/stats', [AssetController::class, 'stats']);
     Route::get('assets/{id}', [AssetController::class, 'show']);
+    Route::get('assets/{id}/fiche', [AssetController::class, 'fiche']);
     Route::get('assets/{id}/qrcode.svg', [AssetController::class, 'qrcode']);
 
     // Endpoints internes (appeles par movement/maintenance avec JWT de service)

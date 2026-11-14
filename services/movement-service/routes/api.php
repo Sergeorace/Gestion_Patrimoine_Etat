@@ -10,9 +10,9 @@ Route::get('/up', fn () => response()->json(['status' => 'ok']));
 Route::middleware(['jwt', 'throttle:api'])->group(function () {
     Route::middleware('permission:mouvement.lire,mouvement.creer,mouvement.valider')->group(function () {
         Route::get('movements', [MovementController::class, 'index']);
+        Route::get('movements/motifs-sortie', [MovementController::class, 'motifs']);
         Route::get('movements/{id}', [MovementController::class, 'show']);
         Route::get('movements/{id}/history', [MovementController::class, 'history']);
-        Route::get('motifs-sortie', [MovementController::class, 'motifs']);
     });
 
     Route::middleware('permission:mouvement.creer')->group(function () {
