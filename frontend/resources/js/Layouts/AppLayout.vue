@@ -60,7 +60,7 @@ function logout() {
         </div>
       </div>
 
-      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav class="flex-1 px-4 py-5 space-y-2 overflow-y-auto">
         <Link v-for="n in navFiltre" :key="n.href" :href="n.href"
               :class="['nav-item', { actif: actif(n.href) }]">
           {{ n.label }}

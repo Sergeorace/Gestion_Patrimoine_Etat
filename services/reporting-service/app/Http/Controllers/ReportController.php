@@ -63,11 +63,11 @@ class ReportController extends Controller
         $data = match ($d['type']) {
             'valorisation' => $this->get('VALUATION_SERVICE_URL', '/api/v1/valorisation', ['per_page' => 5000]),
             'mouvements' => $this->get('MOVEMENT_SERVICE_URL', '/api/v1/movements', array_filter([
-                'structure_source_id' => $d['structure_id'], 'per_page' => 5000,
+                'structure_source_id' => $d['structure_id'] ?? null, 'per_page' => 5000,
             ])),
             'maintenance' => $this->get('MAINTENANCE_SERVICE_URL', '/api/v1/maintenance/interventions', ['per_page' => 5000]),
             default => $this->get('ASSET_SERVICE_URL', '/api/v1/assets', array_filter([
-                'structure_id' => $d['structure_id'], 'per_page' => 5000,
+                'structure_id' => $d['structure_id'] ?? null, 'per_page' => 5000,
             ])),
         };
 

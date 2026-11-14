@@ -79,7 +79,9 @@ class DatabaseSeeder extends Seeder
         $users = [
             ['email' => 'admin@etat.tg', 'nom' => 'AGBEKO', 'prenom' => 'Kossi', 'roles' => ['admin']],
             ['email' => 'gestionnaire@etat.tg', 'nom' => 'MENSAH', 'prenom' => 'Komi', 'roles' => ['gestionnaire']],
-            ['email' => 'resp.defense@etat.tg', 'nom' => 'LAWSON', 'prenom' => 'Ama', 'roles' => ['responsable']],
+            // Le responsable de structure est rattache a une structure (perimetre RG-06)
+            ['email' => 'resp.defense@etat.tg', 'nom' => 'LAWSON', 'prenom' => 'Ama', 'roles' => ['responsable'],
+             'structure_id' => 'a0000000-0000-4000-8000-000000000004'],
             ['email' => 'inventoriste@etat.tg', 'nom' => 'TETOU', 'prenom' => 'Efoe', 'roles' => ['inventoriste']],
             ['email' => 'comptable@etat.tg', 'nom' => 'AKPAN', 'prenom' => 'Yao', 'roles' => ['comptable']],
             ['email' => 'maintenance@etat.tg', 'nom' => 'GBEFO', 'prenom' => 'Sena', 'roles' => ['maintenance']],
@@ -93,6 +95,9 @@ class DatabaseSeeder extends Seeder
                 'statut' => 'actif',
             ]);
             $user->roles()->sync(Role::whereIn('code', $u['roles'])->pluck('id'));
+            if (isset($u['structure_id'])) {
+                $user->forceFill(['structure_id' => $u['structure_id']])->save();
+            }
         }
     }
 }

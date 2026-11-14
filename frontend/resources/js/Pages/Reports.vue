@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import AppLayout from '../Layouts/AppLayout.vue';
-import { api, apiBase } from '../api';
+import { api, apiBase, getToken } from '../api';
 import { loadAuth, peutAction } from '../authz';
 
 const d = ref(null), items = ref([]), err = ref(''), notice = ref('');
@@ -35,6 +35,24 @@ async function generer(type, format) {
     }
     await load();
   } catch (e) { notice.value = e.message; } finally { busy.value = ''; }
+}
+
+async function telecharger(r) {
+  busy.value = `dl-${r.id}`; notice.value = '';
+  try {
+    const res = await fetch(`${apiBase}/reports/${r.id}/download`, {
+      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'text/csv' },
+    });
+    if (! res.ok) throw new Error(`Erreur ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rapport-${r.type}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) { notice.value = 'Téléchargement impossible : ' + e.message; }
+  finally { busy.value = ''; }
 }
 
 const fcfa = (n) => (Number(n) || 0).toLocaleString('fr-FR');
@@ -105,7 +123,11 @@ onMounted(async () => { loadAuth(); await load(); });
             <td class="td" style="color: var(--discret);">{{ r.format?.toUpperCase() }}</td>
             <td class="td" style="color: var(--discret);">{{ r.genere_le ?? r.created_at ?? '—' }}</td>
             <td class="td text-right">
-              <a :href="`${apiBase}/reports/${r.id}/download`" class="text-sm font-medium hover:underline" style="color: var(--vert-700);">CSV ↓</a>
+              <button @click="telecharger(r)" :disabled="busy === `dl-${r.id}`"
+                      class="text-sm font-medium hover:underline disabled:opacity-50"
+                      style="color: var(--vert-700);">
+                {{ busy === `dl-${r.id}` ? '…' : 'CSV ↓' }}
+              </button>
             </td>
           </tr>
           <tr v-if="!items.length">

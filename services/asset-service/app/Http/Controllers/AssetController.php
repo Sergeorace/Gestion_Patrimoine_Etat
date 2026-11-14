@@ -19,14 +19,13 @@ class AssetController extends Controller
     {
         $q = DB::table('biens')->whereNull('deleted_at');
 
-        // Perimetre RG-06 : structure_id restreint sauf role central/audit
+        // Perimetre RG-06 : un agent rattache a une structure ne voit que ses
+        // biens ; les agents centraux (sans structure_id) et l'admin voient tout.
         $claims = $request->attributes->get('jwt', []);
         $perms = $claims['permissions'] ?? [];
-        $central = in_array('*', $perms, true) || in_array('bien.gerer_central', $perms, true);
-        if (! $central && ! empty($claims['structure_id'])) {
+        $admin = in_array('*', $perms, true);
+        if (! $admin && ! empty($claims['structure_id'])) {
             $q->where('structure_id', $claims['structure_id']);
-        } elseif (! $central) {
-            $q->whereRaw('1 = 0');
         }
 
         foreach (['statut', 'etat', 'type_specifique', 'structure_id', 'site_id', 'categorie_id'] as $f) {
