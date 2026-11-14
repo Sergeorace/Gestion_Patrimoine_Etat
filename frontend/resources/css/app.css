@@ -58,6 +58,66 @@ html, body {
 
 ::selection { background: var(--vert-100); }
 
+/* --------------------------------------------------------------------------
+   Armoiries de la République Togolaise
+   -------------------------------------------------------------------------- */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 16px;
+  border-bottom: 1px solid #2a3750;
+  margin-bottom: 12px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.25;
+}
+.sidebar-logo img {
+  width: 44px;
+  height: 55px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 0 32px 32px;
+}
+.watermark {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 720px;
+  width: auto;
+  opacity: .25;
+  pointer-events: none;
+}
+.topbar {
+  padding: 14px 0;
+  border-bottom: 1px solid #e4e7ec;
+  margin-bottom: 24px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #475467;
+}
+@media (max-width: 767px) {
+  .watermark { height: 400px; }
+  .main { padding: 0 16px 24px; }
+  .topbar { padding: 10px 0; margin-bottom: 16px; }
+}
+
+@media print {
+  .sidebar, .watermark, .topbar, header .flex.items-center.justify-between > div:last-child { display: none !important; }
+  .main { padding: 0; overflow: visible; }
+}
+
 @layer components {
   .carte {
     @apply bg-white rounded-xl;

@@ -77,7 +77,10 @@ class ReportRenderer
 
     private static function emblemeHtml(): string
     {
-        $png = storage_path('app/armoiries.png');
+        $png = resource_path('assets/armoiries.png');
+        if (! is_file($png)) {
+            $png = storage_path('app/armoiries.png');
+        }
         if (is_file($png)) {
             $b64 = base64_encode((string) file_get_contents($png));
             return '<img src="data:image/png;base64,'.$b64.'" style="height: 34mm;" alt="Armoiries">';

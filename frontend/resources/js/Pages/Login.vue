@@ -22,10 +22,10 @@ async function submit() {
     <div class="w-full max-w-sm">
       <!-- Blason / identité -->
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
-             style="background: var(--or); color: var(--vert-950); font-weight: 800; font-size: 1.3rem;">PE</div>
+        <img :src="'/assets/armoiries.png'" alt="Armoiries de la République Togolaise"
+             class="mx-auto mb-4" style="width: 96px; height: 120px; object-fit: contain;">
         <h1 class="text-white text-xl font-bold">Patrimoine de l'État</h1>
-        <p class="text-xs mt-1 uppercase tracking-widest" style="color: var(--or);">République Togolaise</p>
+        <p class="text-xs mt-1 font-semibold" style="color: #fff;">République Togolaise</p>
         <p class="text-xs mt-1" style="color: rgba(255,255,255,.45);">Travail · Liberté · Patrie</p>
       </div>
 

@@ -1,11 +1,12 @@
 <script setup>
 import { Link, usePage, router } from '@inertiajs/vue3';
-import { computed, onMounted, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { api } from '../api';
 import { authz, loadAuth, pageAutorisee } from '../authz';
 
 const props = defineProps({ title: { type: String, default: '' } });
 const page = usePage();
+const menuOuvert = ref(false);
 
 const nav = [
   { label: 'Tableau de bord', href: '/tableau-de-bord' },
@@ -26,6 +27,7 @@ onMounted(loadAuth);
 // renvoie vers le tableau de bord.
 watch(() => page.url, async (url) => {
   await loadAuth();
+  menuOuvert.value = false;
   const path = url.split('?')[0];
   if (path !== '/tableau-de-bord' && ! pageAutorisee(path)) {
     router.visit('/tableau-de-bord');
@@ -45,19 +47,13 @@ function logout() {
 <template>
   <div class="min-h-screen flex">
     <!-- ===================== Sidebar ===================== -->
-    <aside class="w-64 shrink-0 flex flex-col fixed inset-y-0" style="background: var(--vert-950);">
-      <div class="px-5 pt-6 pb-5" style="border-bottom: 1px solid rgba(255,255,255,.09);">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-               style="background: var(--or); color: var(--vert-950); font-weight: 800; font-size: .95rem;">PE</div>
-          <div>
-            <div class="text-white font-bold leading-tight text-[15px]">Patrimoine de l'État</div>
-            <div class="text-[10px] uppercase tracking-widest" style="color: var(--or);">République Togolaise</div>
-          </div>
-        </div>
-        <div class="mt-3 text-[10.5px] leading-snug" style="color: rgba(255,255,255,.45);">
-          Travail · Liberté · Patrie
-        </div>
+    <div v-if="menuOuvert" class="fixed inset-0 z-30 bg-black/40 md:hidden" @click="menuOuvert = false"></div>
+    <aside class="sidebar w-64 shrink-0 flex-col fixed inset-y-0 z-40 transition-transform duration-200"
+           :class="menuOuvert ? 'translate-x-0 flex' : '-translate-x-full hidden md:flex md:translate-x-0'"
+           style="background: var(--vert-950);">
+      <div class="sidebar-logo">
+        <img :src="'/assets/armoiries.png'" alt="Armoiries de la République Togolaise">
+        <span>Patrimoine<br>de l'État</span>
       </div>
 
       <nav class="flex-1 px-4 py-5 space-y-2 overflow-y-auto">
@@ -78,9 +74,23 @@ function logout() {
     </aside>
 
     <!-- ===================== Contenu ===================== -->
-    <div class="app-fond flex-1 ml-64 flex flex-col min-w-0 relative">
+    <div class="app-fond main flex-1 md:ml-64 flex flex-col min-w-0">
+      <!-- Filigrane institutionnel : armoirie en filigrane derriere le contenu -->
+      <img class="watermark" :src="'/assets/armoiries.png'" alt="" aria-hidden="true">
+
       <div class="relative z-10 flex flex-col flex-1 min-h-0">
-      <header class="px-8 pt-6 pb-4 flex items-center justify-between gap-4">
+      <div class="topbar flex items-center gap-3">
+        <button class="md:hidden btn-secondaire !px-2.5 !py-1.5" @click="menuOuvert = !menuOuvert" aria-label="Menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+          </svg>
+        </button>
+        <div>
+          <div class="font-bold" style="color: var(--encre);">République Togolaise</div>
+          <div>Travail · Liberté · Patrie</div>
+        </div>
+      </div>
+      <header class="pt-4 pb-4 flex items-center justify-between gap-4">
         <h1 class="text-xl font-bold tracking-tight">{{ title }}</h1>
         <div v-if="user" class="flex items-center gap-3">
           <div class="text-right">
@@ -93,7 +103,7 @@ function logout() {
           </div>
         </div>
       </header>
-      <main class="flex-1 px-8 pb-10"><slot /></main>
+      <main class="flex-1"><slot /></main>
       </div>
     </div>
   </div>

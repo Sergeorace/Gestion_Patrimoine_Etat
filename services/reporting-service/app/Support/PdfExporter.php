@@ -47,18 +47,24 @@ class PdfExporter
             $vert = [0.0, 0.416, 0.306];
             $gris = [0.4, 0.4, 0.4];
 
-            // En-tete : filet vert + libelles (y mesure depuis le bas)
+            // Coordonnees canvas : y mesure depuis le HAUT de la page.
+            // Armoirie dans l'en-tete (ratio ~0.7 -> h=14pt, w=10pt).
+            $img = resource_path('assets/armoiries.png');
+            if (is_file($img)) {
+                $pdf->image($img, $marge, 26, 10, 14);
+            }
+
+            // En-tete : filet vert + libelles
             // NB : text() dessine sur la page courante ; page_text() enregistrerait
             // un script "toutes pages" (et s'executerait aussi sur la couverture).
-            $yLigne = $H - 42;
-            $pdf->line($marge, $yLigne, $W - $marge, $yLigne, $vert, 0.8);
-            $pdf->text($marge, $yLigne + 10, 'République Togolaise · Travail · Liberté · Patrie', $font, 7, $gris);
-            $pdf->text($W - $marge - 160, $yLigne + 10, $titre, $font, 8, $vert);
+            $pdf->line($marge, 46, $W - $marge, 46, $vert, 0.8);
+            $pdf->text($marge + 14, 32, 'République Togolaise · Travail · Liberté · Patrie', $font, 7, $gris);
+            $pdf->text($W - $marge - 160, 32, $titre, $font, 8, $vert);
 
             // Pied : filet gris + numerotation
-            $yBas = 45;
+            $yBas = $H - 45;
             $pdf->line($marge, $yBas, $W - $marge, $yBas, [0.85, 0.85, 0.85], 0.5);
-            $pdf->text($W / 2 - 25, $yBas - 12, "Page {$num} / {$count}", $font, 8, $gris);
+            $pdf->text($W / 2 - 25, $yBas + 12, "Page {$num} / {$count}", $font, 8, $gris);
         });
     }
 }
