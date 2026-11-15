@@ -17,6 +17,11 @@ export PGPASSWORD=patrimoine
 
 say() { echo "[monolithe] $*"; }
 
+# Configs systeme depuis /monolith (image monolithe)
+cp /monolith/nginx.conf /etc/nginx/http.d/default.conf
+cp /monolith/proxy_params.inc /etc/nginx/proxy_params.inc
+cp /monolith/supervisord.conf /etc/supervisor/conf.d/monolith.conf
+
 # ---------------------------------------------------------------------------
 # 1. Cles JWT RS256 (privee pour auth-service, publique pour tous)
 # ---------------------------------------------------------------------------
