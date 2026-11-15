@@ -1,0 +1,27 @@
+# Contexte de build Docker (monolithe SnapDeploy)
+.git/
+_mega/
+mega_dl/
+nul
+docs/
+
+# Dependances installees dans l'image
+**/vendor/
+**/node_modules/
+
+# Secrets et environnements locaux
+.env
+services/*/.env
+frontend/.env
+*.pem
+!docker/keys/jwt_public.pem
+
+# Artefacts generes
+**/public/build/
+**/public/hot
+**/storage/logs/*
+**/storage/framework/cache/*
+**/storage/framework/sessions/*
+**/storage/framework/views/*
+**/bootstrap/cache/*
+.phpunit.result.cache
