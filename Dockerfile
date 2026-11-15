@@ -14,10 +14,13 @@ COPY docker ./docker
 COPY docker/postgres/init.sql ./init.sql
 COPY docker/monolith/ /monolith/
 RUN set -e; cd /var/www/services; \
- for s in auth-service organisation-service asset-service movement-service inventory-service maintenance-service valuation-service document-service notification-service reporting-service frontend; do \
-  echo "== composer $s"; (cd $s && composer update --no-dev --prefer-dist --no-interaction --no-scripts --optimize-autoloader && mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache) || exit 1; done; \
+ S="auth-service organisation-service asset-service movement-service inventory-service maintenance-service valuation-service document-service notification-service reporting-service"; \
+ (cd auth-service && composer update --no-dev --prefer-dist --no-interaction --no-scripts --optimize-autoloader); \
+ for s in $S; do mkdir -p $s/storage/app/public $s/storage/framework/cache/data $s/storage/framework/sessions $s/storage/framework/views $s/storage/logs $s/bootstrap/cache; done; \
+ for s in organisation-service asset-service movement-service inventory-service maintenance-service valuation-service document-service notification-service reporting-service; do cp -a auth-service/vendor $s/vendor && (cd $s && composer dump-autoload --no-dev -q); done; \
+ (cd frontend && composer update --no-dev --prefer-dist --no-interaction --no-scripts --optimize-autoloader && mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache); \
  cd frontend && npm install --no-audit --no-fund && npm run build; \
- for s in auth-service organisation-service asset-service movement-service inventory-service maintenance-service valuation-service document-service notification-service reporting-service frontend; do [ -d $s/vendor ] || exit 1; done
+ for s in $S frontend; do [ -d $s/vendor ] || exit 1; done
 RUN mkdir -p /var/lib/pgsql/data /run/nginx /var/log/supervisor && chown -R postgres:postgres /var/lib/pgsql && chmod 700 /var/lib/pgsql/data
 EXPOSE 80
 ENTRYPOINT ["sh","/monolith/entrypoint.sh"]
