@@ -38,17 +38,20 @@ class DocumentController extends Controller
             'entite_type' => 'nullable|string|max:50',
             'entite_type_id' => 'nullable|uuid',
             'description' => 'nullable|string|max:1000',
-            'fichier' => 'required|file|max:20480', // 20 Mo
+            // Whitelist MIME : pas d'executable, script ou SVG actif
+            'fichier' => 'required|file|max:20480|mimetypes:application/pdf,image/jpeg,image/png,image/webp,image/gif,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv',
         ]);
 
         $file = $request->file('fichier');
         $docId = (string) Str::uuid();
-        $dir = "documents/{$docId}";
-        $path = $file->storeAs($dir, Str::slug($file->getClientOriginalName()).'.'.$file->getClientOriginalExtension(), 'local');
-        // En production : disque 'documents' (volume dedie) ; ici local pour simplicite.
+        $dir = "documents/$docId";
+        // Extension derivee du contenu reel ( MIME ), jamais du nom client
+        $ext = $file->guessExtension() ?: 'bin';
+        $path = $file->storeAs($dir, Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)).'.'.$ext, 'local');
 
         $id = (string) Str::uuid();
-        DB::table('documents')->insert([
+        DB::transaction(function () use ($d, $id, $file, $path, $claims, $request) {
+            DB::table('documents')->insert([
             'id' => $id, 'reference' => 'DOC-'.now()->format('Y').'-'.strtoupper(Str::random(6)),
             'type' => $d['type'], 'nom_fichier' => $file->getClientOriginalName(),
             'chemin' => $path, 'mime_type' => $file->getClientMimeType(),
@@ -56,12 +59,13 @@ class DocumentController extends Controller
             'entite_type_id' => $d['entite_type_id'] ?? null,
             'uploade_par' => $claims['sub'] ?? null, 'description' => $d['description'] ?? null,
             'created_at' => now(), 'updated_at' => now(),
-        ]);
-        DB::table('versions_documents')->insert([
-            'id' => (string) Str::uuid(), 'document_id' => $id, 'version' => 1,
-            'chemin' => $path, 'cree_par' => $claims['sub'] ?? null,
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
+            ]);
+            DB::table('versions_documents')->insert([
+                'id' => (string) Str::uuid(), 'document_id' => $id, 'version' => 1,
+                'chemin' => $path, 'cree_par' => $claims['sub'] ?? null,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+        });
         return $this->created(DB::table('documents')->find($id));
     }
 
@@ -80,10 +84,11 @@ class DocumentController extends Controller
     {
         $doc = DB::table('documents')->find($id);
         if (! $doc) return $this->error('NOT_FOUND', 'Document introuvable.', 404);
-        $request->validate(['fichier' => 'required|file|max:20480']);
+        $request->validate(['fichier' => 'required|file|max:20480|mimetypes:application/pdf,image/jpeg,image/png,image/webp,image/gif,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv']);
         $file = $request->file('fichier');
-        $path = $file->storeAs('documents/'.$id, 'v'.(DB::table('versions_documents')->where('document_id', $id)->count() + 1).'.'.$file->getClientOriginalExtension(), 'local');
-        $v = DB::table('versions_documents')->where('document_id', $id)->count() + 1;
+        $v = ((int) DB::table('versions_documents')->where('document_id', $id)->max('version')) + 1;
+        $ext = $file->guessExtension() ?: 'bin';
+        $path = $file->storeAs('documents/'.$id, 'v'.$v.'.'.$ext, 'local');
         DB::table('versions_documents')->insert([
             'id' => (string) Str::uuid(), 'document_id' => $id, 'version' => $v,
             'chemin' => $path, 'cree_par' => $request->attributes->get('jwt')['sub'] ?? null,
@@ -94,8 +99,17 @@ class DocumentController extends Controller
 
     public function destroy(string $id)
     {
-        DB::table('documents')->where('id', $id)->delete();
+        $doc = DB::table('documents')->find($id);
+        if (! $doc) return $this->error('NOT_FOUND', 'Document introuvable.', 404);
+        // Supprime aussi les fichiers physiques (confidentialite)
+        $chemins = DB::table('versions_documents')->where('document_id', $id)->pluck('chemin')
+            ->push($doc->chemin)->filter();
+        foreach ($chemins as $c) {
+            $p = storage_path('app/'.$c);
+            if (is_file($p)) @unlink($p);
+        }
         DB::table('versions_documents')->where('document_id', $id)->delete();
+        DB::table('documents')->where('id', $id)->delete();
         return $this->ok(['supprime' => true]);
     }
 }

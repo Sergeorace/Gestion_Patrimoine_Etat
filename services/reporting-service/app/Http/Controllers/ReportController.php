@@ -299,10 +299,16 @@ class ReportController extends Controller
         return $out;
     }
 
-    public function download(string $id)
+    public function download(Request $request, string $id)
     {
         $r = DB::table('rapports_generees')->find($id);
         if (! $r) return $this->error('NOT_FOUND', 'Rapport introuvable.', 404);
+        // Anti-IDOR : seul le generateur (ou un admin) peut retelercharger
+        $claims = $request->attributes->get('jwt', []);
+        $perms = (array) ($claims['permissions'] ?? []);
+        if (! in_array('*', $perms, true) && ($r->genere_par ?? null) !== ($claims['sub'] ?? null)) {
+            return $this->error('FORBIDDEN', 'Ce rapport ne vous appartient pas.', 403);
+        }
         $data = $this->getDataForReport($r);
         $csv = $this->toCsv($data);
         return response($csv, 200, ['Content-Type' => 'text/csv; charset=UTF-8', 'Content-Disposition' => "attachment; filename=rapport-{$r->type}.csv"]);
@@ -310,7 +316,14 @@ class ReportController extends Controller
 
     public function index(Request $request)
     {
-        return $this->ok(DB::table('rapports_generees')->orderByDesc('genere_le')->paginate(30));
+        $claims = $request->attributes->get('jwt', []);
+        $perms = (array) ($claims['permissions'] ?? []);
+        $q = DB::table('rapports_generees')->orderByDesc('genere_le');
+        // Hors admin : chacun ne voit que ses propres generations
+        if (! in_array('*', $perms, true)) {
+            $q->where('genere_par', $claims['sub'] ?? '');
+        }
+        return $this->ok($q->paginate(30));
     }
 
     private function getDataForReport(object $r): array

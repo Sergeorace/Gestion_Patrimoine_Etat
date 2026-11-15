@@ -80,11 +80,20 @@ class InventoryController extends Controller
         $c = DB::table('campagnes')->find($id);
         if (! $c) return $this->error('NOT_FOUND', 'Campagne introuvable.', 404);
         try {
-            $r = Http::timeout(8)->withToken($this->serviceToken())->get(env('ASSET_SERVICE_URL').'/api/v1/assets', [
-                'structure_id' => $c->structure_id, 'site_id' => $c->site_id,
-                'categorie_id' => $c->categorie_id, 'per_page' => 500,
-            ]);
-            return $this->ok($r->json('data') ?? []);
+            $rows = [];
+            for ($page = 1; $page <= 50; $page++) {
+                $r = Http::timeout(8)->withToken($this->serviceToken())->get(env('ASSET_SERVICE_URL').'/api/v1/assets', [
+                    'structure_id' => $c->structure_id, 'site_id' => $c->site_id,
+                    'categorie_id' => $c->categorie_id, 'per_page' => 100, 'page' => $page,
+                ]);
+                $payload = $r->json('data');
+                if (! is_array($payload)) break;
+                $batch = $payload['data'] ?? $payload;
+                if (! is_array($batch) || ! count($batch)) break;
+                foreach ($batch as $b) $rows[] = $b;
+                if ($page >= (int) ($payload['last_page'] ?? 1)) break;
+            }
+            return $this->ok($rows);
         } catch (\Throwable $e) {
             return $this->error('UPSTREAM', 'Asset-service indisponible.', 502);
         }
@@ -149,20 +158,27 @@ class InventoryController extends Controller
             return $this->error('INVALID_STATE', 'Seule une campagne en cours peut etre cloturee.', 409);
         }
 
-        // Liste des biens attendus
+        // Liste des biens attendus (pagination complete : per_page plafonne a 100 cote asset)
         $attendus = collect();
         try {
-            $r = Http::timeout(15)->withToken($this->serviceToken())->get(env('ASSET_SERVICE_URL').'/api/v1/assets', [
-                'structure_id' => $c->structure_id, 'site_id' => $c->site_id,
-                'categorie_id' => $c->categorie_id, 'per_page' => 5000,
-            ]);
-            $attendus = collect($r->json('data') ?? [])->pluck('id');
+            for ($page = 1; $page <= 50; $page++) {
+                $r = Http::timeout(15)->withToken($this->serviceToken())->get(env('ASSET_SERVICE_URL').'/api/v1/assets', [
+                    'structure_id' => $c->structure_id, 'site_id' => $c->site_id,
+                    'categorie_id' => $c->categorie_id, 'per_page' => 100, 'page' => $page,
+                ]);
+                $payload = $r->json('data');
+                if (! is_array($payload)) break;
+                $rows = $payload['data'] ?? $payload;
+                if (! is_array($rows) || ! count($rows)) break;
+                $attendus = $attendus->merge(collect($rows)->pluck('id'));
+                if ($page >= (int) ($payload['last_page'] ?? 1)) break;
+            }
         } catch (\Throwable) {}
 
         $constates = DB::table('constates')->where('campagne_id', $id)->get()->keyBy('bien_id');
         $presents = $constates->where('present', true);
         $manquants = $attendus->diff($constates->keys());
-        $degrades = $present = $presents->whereIn('etat_constate', ['degrade', 'hors_service'])->count();
+        $degrades = $presents->whereIn('etat_constate', ['degrade', 'hors_service'])->count();
 
         DB::transaction(function () use ($id, $manquants, $constates, $presents, $attendus, $degrades) {
             foreach ($manquants as $bienId) {

@@ -39,12 +39,21 @@ class ValuationController extends Controller
         $d = $request->validate(['exercice' => 'required|integer|min:2000|max:2100']);
         $exercice = (int) $d['exercice'];
 
-        // Biens actifs via asset-service
+        // Biens actifs via asset-service : pagination complete (l'API borne
+        // per_page a 100, il faut iterer sur toutes les pages).
         $biens = collect();
         try {
-            $r = Http::timeout(15)->withToken(env('SERVICE_TOKEN', ''))->get(env('ASSET_SERVICE_URL').'/api/v1/assets', ['per_page' => 5000]);
-            $rows = $r->json('data.data') ?? $r->json('data') ?? [];
-            $biens = collect($rows)->map(fn ($b) => (object) $b);
+            $page = 1;
+            do {
+                $r = Http::timeout(15)->withToken(env('SERVICE_TOKEN', ''))->get(env('ASSET_SERVICE_URL').'/api/v1/assets', ['per_page' => 100, 'page' => $page]);
+                if (! $r->successful()) {
+                    return $this->error('UPSTREAM', 'Asset-service indisponible.', 502);
+                }
+                $rows = $r->json('data.data') ?? [];
+                $biens = $biens->merge(collect($rows)->map(fn ($b) => (object) $b));
+                $lastPage = (int) ($r->json('data.last_page') ?? 1);
+                $page++;
+            } while ($page <= $lastPage && $page <= 200);
         } catch (\Throwable $e) {
             return $this->error('UPSTREAM', 'Asset-service indisponible.', 502);
         }
@@ -53,8 +62,10 @@ class ValuationController extends Controller
         $categories = collect();
         try {
             $r = Http::timeout(10)->withToken(env('SERVICE_TOKEN', ''))->get(env('ORGANISATION_SERVICE_URL').'/api/v1/categories', ['arbre' => 1]);
-            $cats = $r->json('data.data') ?? $r->json('data') ?? [];
-            $categories = collect($cats)->map(fn ($c) => (object) $c)->keyBy('id');
+            if ($r->successful()) {
+                $cats = $r->json('data.data') ?? $r->json('data') ?? [];
+                $categories = collect($cats)->map(fn ($c) => (object) $c)->keyBy('id');
+            }
         } catch (\Throwable) {}
 
         $crees = 0;
@@ -62,7 +73,8 @@ class ValuationController extends Controller
             if (in_array($bien->statut, ['sorti'], true)) continue;
             if (array_key_exists('immobilisation', (array) $bien) && ! $bien->immobilisation) continue; // charges, hors registre
             $cat = $categories->get($bien->categorie_id);
-            $duree = $cat->duree_vie_mois ?? 120; // defaut 10 ans
+            $duree = (int) ($cat->duree_vie_mois ?? 120); // defaut 10 ans
+            if ($duree <= 0) $duree = 120; // protection division par zero / duree negative
             $methode = $cat->methode_amortissement ?? 'lineaire';
             $acquisition = (float) $bien->valeur_acquisition;
             if ($acquisition <= 0) continue;
@@ -127,11 +139,14 @@ class ValuationController extends Controller
     /** GET /api/v1/valorisation/stats */
     public function stats()
     {
+        // Amortissements cumules sur le MEME exercice que les valorisations
+        // pour que les totaux soient comparables.
+        $maxEx = DB::table('valorisations')->max('exercice');
         return $this->ok([
-            'total_vnc' => DB::table('valorisations')->where('exercice', DB::table('valorisations')->max('exercice'))->sum('vnc'),
-            'total_acquisition' => DB::table('valorisations')->where('exercice', DB::table('valorisations')->max('exercice'))->sum('valeur_acquisition'),
+            'total_vnc' => DB::table('valorisations')->where('exercice', $maxEx)->sum('vnc'),
+            'total_acquisition' => DB::table('valorisations')->where('exercice', $maxEx)->sum('valeur_acquisition'),
             'total_amortissements' => DB::table('amortissements')->sum('dotation'),
-            'nombre_biens' => DB::table('valorisations')->distinct('bien_id')->count('bien_id'),
+            'nombre_biens' => DB::table('valorisations')->where('exercice', $maxEx)->distinct('bien_id')->count('bien_id'),
         ]);
     }
 

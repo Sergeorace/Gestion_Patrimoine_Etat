@@ -18,6 +18,7 @@ Route::middleware(['jwt', 'throttle:api'])->group(function () {
     Route::middleware('permission:mouvement.creer')->group(function () {
         Route::post('movements', [MovementController::class, 'store']);
         Route::post('movements/{id}/cancel', [MovementController::class, 'cancel']);
+        Route::post('movements/{id}/retry', [MovementController::class, 'retry']);
     });
     Route::middleware('permission:mouvement.valider')->post('movements/{id}/decision', [MovementController::class, 'decide']);
 });

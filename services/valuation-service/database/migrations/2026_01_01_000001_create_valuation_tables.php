@@ -29,6 +29,7 @@ return new class extends Migration
             $table->decimal('taux_applique', 6, 4)->nullable();
             $table->jsonb('detail_calcul')->nullable();
             $table->timestamps();
+            $table->unique(['bien_id', 'exercice']);
         });
 
         Schema::create('reevaluations', function (Blueprint $table) {

@@ -24,7 +24,18 @@ class Jwt
         if (($header['alg'] ?? '') !== 'RS256') {
             return null;
         }
-        if (isset($payload['exp']) && $payload['exp'] < time()) {
+        // exp obligatoire : un jeton sans expiration ne doit jamais etre accepte
+        if (! isset($payload['exp']) || ! is_numeric($payload['exp']) || $payload['exp'] < time()) {
+            return null;
+        }
+        // Emetteur et audience verifies quand presents
+        if (isset($payload['iss']) && $payload['iss'] !== 'patrimoine-auth') {
+            return null;
+        }
+        if (isset($payload['aud']) && $payload['aud'] !== 'patrimoine-api') {
+            return null;
+        }
+        if (isset($payload['nbf']) && is_numeric($payload['nbf']) && $payload['nbf'] > time()) {
             return null;
         }
 

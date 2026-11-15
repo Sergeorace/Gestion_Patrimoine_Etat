@@ -10,6 +10,8 @@ Route::get('/up', fn () => response()->json(['status' => 'ok']));
 // Endpoint interne pour les autres services (SERVICE_TOKEN controle en pratique)
 Route::post('notifications', [NotificationController::class, 'store'])
     ->middleware('jwt');
+Route::post('audit', [NotificationController::class, 'audit'])
+    ->middleware('jwt');
 
 Route::middleware(['jwt', 'throttle:api'])->group(function () {
     Route::get('notifications', [NotificationController::class, 'index']);

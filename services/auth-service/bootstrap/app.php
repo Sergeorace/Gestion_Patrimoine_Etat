@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Derriere la gateway nginx : faire confiance aux X-Forwarded-For
+        // pour que $request->ip() retourne l'IP reelle du client
+        // (rate limiting et journaux de connexion corrects).
+        $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
         $middleware->alias([
             'jwt' => App\Http\Middleware\VerifyJwt::class,
             'permission' => App\Http\Middleware\RequirePermission::class,

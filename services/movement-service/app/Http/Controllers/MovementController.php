@@ -101,15 +101,24 @@ class MovementController extends Controller
         if ($m->statut !== 'en_attente') {
             return $this->error('INVALID_STATE', 'Seule une demande en attente peut etre decidee.', 409);
         }
+        $claims = $request->attributes->get('jwt', []);
+        // Anti auto-validation : le demandeur ne peut pas valider sa propre demande
+        if (($m->demandeur_id ?? null) === ($claims['sub'] ?? null) && ! in_array('*', (array) ($claims['permissions'] ?? []), true)) {
+            return $this->error('SELF_VALIDATION', 'Vous ne pouvez pas valider votre propre demande.', 403);
+        }
 
         $d = $request->validate([
             'decision' => 'required|in:validee,rejetee',
             'commentaire' => 'required_if:decision,rejetee|nullable|string|max:1000',
         ]);
-        $claims = $request->attributes->get('jwt', []);
 
         $newStatut = $d['decision'] === 'validee' ? 'validee' : 'rejetee';
-        DB::transaction(function () use ($m, $newStatut, $d, $claims) {
+        $gagne = false;
+        DB::transaction(function () use ($m, $newStatut, $d, $claims, &$gagne) {
+            // Verrou pessimiste : un seul valideur peut trancher (anti-TOCTOU)
+            $lock = DB::table('mouvements')->where('id', $m->id)->where('statut', 'en_attente')->lockForUpdate()->first();
+            if (! $lock) return; // deja decide par un concurrent
+            $gagne = true;
             DB::table('validations')->insert([
                 'id' => (string) Str::uuid(),
                 'mouvement_id' => $m->id,
@@ -126,6 +135,9 @@ class MovementController extends Controller
                 'updated_at' => now(),
             ]);
         });
+        if (! $gagne) {
+            return $this->error('INVALID_STATE', 'Cette demande vient d\'etre decidee.', 409);
+        }
 
         if ($newStatut === 'validee') {
             $this->execute($m->id); // applique l'effet sur le bien
@@ -135,14 +147,32 @@ class MovementController extends Controller
         return $this->ok(DB::table('mouvements')->find($m->id));
     }
 
-    /** POST /api/v1/movements/{id}/cancel - annulation par le demandeur */
+    /** POST /api/v1/movements/{id}/cancel - annulation par le demandeur (ou admin) */
     public function cancel(Request $request, string $id)
     {
         $m = DB::table('mouvements')->whereNull('deleted_at')->find($id);
         if (! $m || $m->statut !== 'en_attente') {
             return $this->error('INVALID_STATE', 'Annulation impossible.', 409);
         }
+        $claims = $request->attributes->get('jwt', []);
+        $perms = (array) ($claims['permissions'] ?? []);
+        $admin = in_array('*', $perms, true) || in_array('mouvement.valider', $perms, true);
+        if (! $admin && ($m->demandeur_id ?? null) !== ($claims['sub'] ?? null)) {
+            return $this->error('FORBIDDEN', 'Seul le demandeur peut annuler cette demande.', 403);
+        }
         DB::table('mouvements')->where('id', $id)->update(['statut' => 'annulee', 'updated_at' => now()]);
+        return $this->ok(DB::table('mouvements')->find($id));
+    }
+
+    /** POST /api/v1/movements/{id}/retry - rejoue un mouvement 'echouee' */
+    public function retry(Request $request, string $id)
+    {
+        $m = DB::table('mouvements')->whereNull('deleted_at')->find($id);
+        if (! $m) return $this->error('NOT_FOUND', 'Mouvement introuvable.', 404);
+        if ($m->statut !== 'echouee') {
+            return $this->error('INVALID_STATE', 'Seul un mouvement echoue peut etre rejoue.', 409);
+        }
+        $this->execute($id); // recalcule le statut final (executee/echouee)
         return $this->ok(DB::table('mouvements')->find($id));
     }
 
@@ -193,7 +223,9 @@ class MovementController extends Controller
     {
         try {
             $r = Http::timeout(5)->withToken($this->serviceToken())->get(env('ASSET_SERVICE_URL')."/api/v1/assets/$id");
-            return $r->successful() ? (object) $r->json('data') : null;
+            if (! $r->successful()) return null;
+            $data = $r->json('data');
+            return is_array($data) && $data ? (object) $data : null;
         } catch (\Throwable) { return null; }
     }
 
@@ -213,7 +245,7 @@ class MovementController extends Controller
     private function notify(array $claims, string $message, string $mouvementId): void
     {
         try {
-            Http::timeout(3)->post(env('NOTIFICATION_SERVICE_URL').'/api/v1/notifications', [
+            Http::timeout(3)->withToken(env('SERVICE_TOKEN', ''))->post(env('NOTIFICATION_SERVICE_URL').'/api/v1/notifications', [
                 'utilisateur_id' => $claims['sub'] ?? null,
                 'type' => 'mouvement',
                 'message' => $message,
@@ -225,7 +257,7 @@ class MovementController extends Controller
     private function notifyDemandeur(object $m, string $titre, string $detail): void
     {
         try {
-            Http::timeout(3)->post(env('NOTIFICATION_SERVICE_URL').'/api/v1/notifications', [
+            Http::timeout(3)->withToken(env('SERVICE_TOKEN', ''))->post(env('NOTIFICATION_SERVICE_URL').'/api/v1/notifications', [
                 'utilisateur_id' => $m->demandeur_id,
                 'type' => 'mouvement',
                 'message' => "$titre : {$m->reference} - $detail",

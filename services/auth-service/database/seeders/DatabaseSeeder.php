@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             ['code' => 'maintenance.gerer', 'module' => 'maintenance', 'action' => 'gerer'],
             ['code' => 'valorisation.lire', 'module' => 'valorisation', 'action' => 'lire'],
             ['code' => 'valorisation.gerer', 'module' => 'valorisation', 'action' => 'gerer'],
+            ['code' => 'document.lire', 'module' => 'documents', 'action' => 'lire'],
             ['code' => 'document.gerer', 'module' => 'documents', 'action' => 'gerer'],
             ['code' => 'audit.lire', 'module' => 'audit', 'action' => 'lire'],
             ['code' => 'rapport.lire', 'module' => 'reporting', 'action' => 'lire'],
@@ -45,11 +46,11 @@ class DatabaseSeeder extends Seeder
                 'referentiel.gerer', 'bien.lire', 'bien.creer', 'bien.modifier',
                 'mouvement.creer', 'mouvement.valider', 'inventaire.gerer',
                 'maintenance.gerer', 'valorisation.lire', 'valorisation.gerer',
-                'document.gerer', 'audit.lire', 'rapport.lire', 'rapport.gerer',
+                'document.lire', 'document.gerer', 'audit.lire', 'rapport.lire', 'rapport.gerer',
             ]],
             'responsable' => ['libelle' => 'Responsable de structure', 'perms' => [
                 'bien.lire', 'bien.creer', 'bien.modifier', 'mouvement.creer',
-                'inventaire.gerer', 'maintenance.gerer', 'document.gerer',
+                'inventaire.gerer', 'maintenance.gerer', 'document.lire', 'document.gerer',
                 'valorisation.lire', 'rapport.lire', 'rapport.gerer',
             ]],
             'inventoriste' => ['libelle' => 'Agent inventorialiste', 'perms' => [
@@ -58,14 +59,16 @@ class DatabaseSeeder extends Seeder
             'comptable' => ['libelle' => 'Comptable matieres', 'perms' => [
                 'bien.lire', 'valorisation.lire', 'valorisation.gerer',
                 'mouvement.lire', 'rapport.lire', 'rapport.gerer', 'audit.lire',
+                'document.lire',
             ]],
             'maintenance' => ['libelle' => 'Agent de maintenance', 'perms' => [
                 'bien.lire', 'maintenance.gerer', 'document.gerer',
             ]],
             'auditeur' => ['libelle' => 'Auditeur / Controleur', 'perms' => [
                 'bien.lire', 'audit.lire', 'rapport.lire', 'valorisation.lire',
+                'document.lire',
             ]],
-            'decideur' => ['libelle' => 'Decideur', 'perms' => ['rapport.lire', 'bien.lire']],
+            'decideur' => ['libelle' => 'Decideur', 'perms' => ['rapport.lire', 'bien.lire', 'mouvement.lire', 'mouvement.valider']],
         ];
         foreach ($roles as $code => $def) {
             $role = Role::firstOrCreate(['code' => $code], [
@@ -91,7 +94,7 @@ class DatabaseSeeder extends Seeder
         foreach ($users as $u) {
             $user = User::firstOrCreate(['email' => $u['email']], [
                 'nom' => $u['nom'], 'prenom' => $u['prenom'],
-                'mot_de_passe_hash' => Hash::make('Patrimoine2026!'),
+                'mot_de_passe_hash' => Hash::make(env('SEED_USER_PASSWORD', 'Patrimoine2026!')),
                 'statut' => 'actif',
             ]);
             $user->roles()->sync(Role::whereIn('code', $u['roles'])->pluck('id'));

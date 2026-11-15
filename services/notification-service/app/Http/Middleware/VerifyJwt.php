@@ -38,6 +38,11 @@ class VerifyJwt
         if (! $claims || empty($claims['sub'])) {
             return $this->error('TOKEN_INVALID', 'Jeton invalide ou expire.', 401);
         }
+        // Un refresh token (type=refresh) n'est pas un jeton d'acces :
+        // il ne doit jamais autoriser les routes metier.
+        if (($claims['type'] ?? 'access') !== 'access') {
+            return $this->error('TOKEN_INVALID', 'Jeton de type incorrect.', 401);
+        }
 
         $request->attributes->set('jwt', $claims);
         return $next($request);

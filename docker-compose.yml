@@ -143,6 +143,7 @@ services:
     container_name: patrimoine-document
     env_file: ./services/document-service/.env
     volumes:
+      - ./docker/keys:/etc/patrimoine:ro
       - documents:/var/www/storage/app/documents
     depends_on:
       postgres: { condition: service_healthy }

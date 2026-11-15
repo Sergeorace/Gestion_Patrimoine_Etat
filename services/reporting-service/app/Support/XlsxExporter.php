@@ -72,8 +72,8 @@ class XlsxExporter
             $r += 2;
         }
         foreach ($filtresLabels as $label => $val) {
-            $ws->setCellValue("A{$r}", $label);
-            $ws->setCellValue("B{$r}", $val);
+            $this->setTexte($ws, "A{$r}", $label);
+            $this->setTexte($ws, "B{$r}", $val);
             $this->labelRow($ws, $r);
             $r++;
         }
@@ -87,12 +87,12 @@ class XlsxExporter
         $this->entete($ws, $r, ['Indicateur', 'Valeur']);
         $r++;
         foreach (($contexte['kpis'] ?? []) as $k => $v) {
-            $ws->setCellValue("A{$r}", $k);
+            $this->setTexte($ws, "A{$r}", $k);
             if (is_numeric($v) && str_contains((string) $k, 'Valeur') || str_contains((string) $k, 'VNC') || str_contains((string) $k, 'Amortissement') || str_contains((string) $k, 'Coût')) {
                 $ws->setCellValueExplicit("B{$r}", (float) $v, DataType::TYPE_NUMERIC);
                 $ws->getStyle("B{$r}")->getNumberFormat()->setFormatCode('#,##0 "FCFA"');
             } else {
-                $ws->setCellValue("B{$r}", $v);
+                $this->setTexte($ws, "B{$r}", $v);
             }
             $this->labelRow($ws, $r);
             $r++;
@@ -267,10 +267,26 @@ class XlsxExporter
     // Helpers
     // ------------------------------------------------------------------
 
+    /** Ecrit une cellule texte en neutralisant les caracteres de debut de formule. */
+    private function setTexte(Worksheet $ws, string $coord, $v): void
+    {
+        $v = (string) $v;
+        if (preg_match('/^[=+\-@]/', $v)) {
+            $ws->setCellValueExplicit($coord, "'".$v, DataType::TYPE_STRING);
+        } else {
+            $ws->setCellValue($coord, $v);
+        }
+    }
+
     private function ecrireCellule(Worksheet $ws, string $coord, $v, ?string $fmt): void
     {
         if ($v === null || $v === '') {
             $ws->setCellValueExplicit($coord, 'n.p.', DataType::TYPE_STRING);
+            return;
+        }
+        // Anti-injection de formules : un texte commencant par =, +, -, @ est force en chaine
+        if (is_string($v) && preg_match('/^[=+\-@]/', $v)) {
+            $ws->setCellValueExplicit($coord, "'".$v, DataType::TYPE_STRING);
             return;
         }
         if ($fmt === 'fcfa') {

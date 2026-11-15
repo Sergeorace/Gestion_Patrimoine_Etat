@@ -138,8 +138,18 @@ class MaintenanceController extends Controller
         DB::table('interventions')->where('id', $id)->update($d + [
             'statut' => 'cloturee', 'date_realisee' => now()->toDateString(), 'updated_at' => now(),
         ]);
-        // Le bien repasse en etat disponible/affecte - on notifie asset-service
-        $this->patchAsset($i->bien_id, ['statut' => 'disponible', 'etat' => 'bon']);
+        // Le bien repasse en etat bon ; le statut est restaure selon son affectation
+        // (un bien affecte ne doit pas redevenir "disponible").
+        $statut = 'disponible';
+        try {
+            $r = Http::timeout(5)->withToken(env('SERVICE_TOKEN', ''))->get(
+                env('ASSET_SERVICE_URL')."/api/v1/assets/{$i->bien_id}");
+            $bien = $r->json('data');
+            if (is_array($bien) && ! empty($bien['structure_id'])) {
+                $statut = 'affecte';
+            }
+        } catch (\Throwable) {}
+        $this->patchAsset($i->bien_id, ['statut' => $statut, 'etat' => 'bon']);
         if ($i->plan_id) {
             $plan = DB::table('plans_maintenance')->find($i->plan_id);
             if ($plan) {

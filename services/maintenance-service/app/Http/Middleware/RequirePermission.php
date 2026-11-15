@@ -19,7 +19,7 @@ class RequirePermission
     public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         $claims = $request->attributes->get('jwt', []);
-        $userPerms = $claims['permissions'] ?? [];
+        $userPerms = (array) ($claims['permissions'] ?? []);
 
         $granted = in_array('*', $userPerms, true)
             || count(array_intersect($permissions, $userPerms)) > 0;

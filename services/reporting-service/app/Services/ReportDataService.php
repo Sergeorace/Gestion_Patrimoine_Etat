@@ -43,8 +43,8 @@ class ReportDataService
             'secteur' => $this->str($q['secteur'] ?? null),
             'structure_id' => $this->str($q['service'] ?? $q['structure_id'] ?? null),
             'etat' => $this->str($q['etat'] ?? null),
-            'du' => $this->str($q['du'] ?? null),
-            'au' => $this->str($q['au'] ?? null),
+            'du' => $this->date($q['du'] ?? null),
+            'au' => $this->date($q['au'] ?? null),
         ];
     }
 
@@ -52,6 +52,15 @@ class ReportDataService
     {
         $v = is_string($v) ? trim($v) : null;
         return ($v === '' || $v === null) ? null : $v;
+    }
+
+    /** Date normalisee Y-m-d ou null si invalide. */
+    private function date($v): ?string
+    {
+        $v = $this->str($v);
+        if (! $v) return null;
+        $t = strtotime($v);
+        return $t === false ? null : date('Y-m-d', $t);
     }
 
     // ------------------------------------------------------------------
