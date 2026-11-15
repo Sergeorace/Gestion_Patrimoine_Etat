@@ -15,6 +15,16 @@ Navigateur ──▶ api-gateway (Nginx) ──▶ web-app (Inertia/Vue)
                                         PostgreSQL (1 base/service)  RabbitMQ / Redis
 ```
 
+**Diagramme de composants** (micro-services, passerelle, bases, messagerie) :
+
+![Architecture des composants](docs/02-conception-uml/exports/composants.png)
+
+**Diagramme de déploiement** (conteneurs Docker, réseau, volumes) :
+
+![Déploiement Docker](docs/02-conception-uml/exports/deploiement.png)
+
+> Tous les diagrammes UML (48 exports : cas d'utilisation, séquences, activités, états, classes, MLD) sont intégrés dans [docs/02-conception-uml/README.md](docs/02-conception-uml/README.md#annexes--diagrammes).
+
 ## Structure du dépôt
 
 ```
@@ -78,7 +88,7 @@ Règles :
 ## Documentation
 
 - [Analyse du besoin](docs/01-analyse-besoin/analyse-besoin.md) (étape 1, MD + PDF)
-- [Conception UML](docs/02-conception-uml/README.md) (étape 2, 48 sources Mermaid + 96 exports SVG/PNG)
+- [Conception UML](docs/02-conception-uml/README.md) (étape 2, 48 sources Mermaid + 96 exports SVG/PNG — **tous les diagrammes intégrés en images**)
 - [Design UI/UX](docs/03-design/) (étape 3, charte, wireframes, maquettes SVG, guide Figma)
 - [Proposition financière](docs/04-proposition-financiere/) (étape 4, MD + PDF + Gantt)
 - [Fiche technique](docs/05-fiche-technique/) (étape 5, MD + PDF)

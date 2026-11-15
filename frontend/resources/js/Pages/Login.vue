@@ -29,6 +29,12 @@ async function submit() {
         <p class="text-xs mt-1" style="color: rgba(255,255,255,.45);">Travail · Liberté · Patrie</p>
       </div>
 
+      <!-- Mot de bienvenue -->
+      <p class="text-center text-sm font-medium mb-6" style="color: rgba(255,255,255,.8);">
+        Bienvenue sur la plateforme nationale de gestion du patrimoine de l'État<br>
+        <span class="text-xs font-normal" style="color: rgba(255,255,255,.5);">Connectez-vous pour accéder à votre espace de travail</span>
+      </p>
+
       <!-- Carte de connexion -->
       <form @submit.prevent="submit" class="carte p-7">
         <h2 class="text-base font-bold mb-5">Se connecter</h2>

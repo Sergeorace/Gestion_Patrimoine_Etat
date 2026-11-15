@@ -120,3 +120,213 @@ Les exports sont produits au format SVG et PNG dans `exports/` (mêmes chemins r
 - Chaque diagramme commence par un commentaire `%%` décrivant son objet (conformément au CDC §6.1).
 - Les exports sont **générés** : ne pas les éditer à la main ; modifier la source `.mmd` puis relancer le script.
 - Le MCD conceptuel est porté par `classes/global.mmd` ; les MLD par `donnees/*.mmd`.
+
+## Annexes — Diagrammes
+
+Tous les exports PNG générés depuis les sources Mermaid (dossier `exports/`).
+
+### Architecture
+
+**Diagramme de composants** — micro-services, gateway, bases, messagerie
+
+![Composants](exports/composants.png)
+
+**Diagramme de déploiement** — conteneurs Docker, réseau `patrimoine-net`, volumes
+
+![Déploiement](exports/deploiement.png)
+
+**Exemple d'instances** — objets métier (affectation d'un véhicule)
+
+![Objets](exports/objets.png)
+
+### Cas d'utilisation
+
+**Vue globale** — 8 acteurs, 13 cas d'utilisation
+
+![Cas d'utilisation global](exports/cas-utilisation/global.png)
+
+**Authentification & RBAC**
+
+![Cas d'utilisation auth](exports/cas-utilisation/auth.png)
+
+**Organisation** — structures, sites, nomenclatures
+
+![Cas d'utilisation organisation](exports/cas-utilisation/organisation.png)
+
+**Patrimoine** — fiches biens, QR codes, import
+
+![Cas d'utilisation patrimoine](exports/cas-utilisation/patrimoine.png)
+
+**Mouvements** — affectations, transferts, sorties
+
+![Cas d'utilisation mouvements](exports/cas-utilisation/mouvements.png)
+
+**Inventaire** — campagnes, scan, écarts, récolement
+
+![Cas d'utilisation inventaire](exports/cas-utilisation/inventaire.png)
+
+**Maintenance** — plans, pannes, interventions
+
+![Cas d'utilisation maintenance](exports/cas-utilisation/maintenance.png)
+
+**Valorisation** — amortissements, VNC, réévaluations
+
+![Cas d'utilisation valorisation](exports/cas-utilisation/valorisation.png)
+
+**Documents** — GED, versionnage, contrôle d'accès
+
+![Cas d'utilisation documents](exports/cas-utilisation/documents.png)
+
+**Notifications & audit**
+
+![Cas d'utilisation notifications](exports/cas-utilisation/notifications.png)
+
+**Reporting** — tableaux de bord, états, exports
+
+![Cas d'utilisation reporting](exports/cas-utilisation/reporting.png)
+
+### Diagrammes de séquence
+
+**Connexion** — login + 2FA + émission JWT
+
+![Séquence connexion](exports/sequences/connexion.png)
+
+**Enregistrement d'un bien** — fiche + QR + pièces
+
+![Séquence enregistrement bien](exports/sequences/enregistrement-bien.png)
+
+**Affectation** — demande → validation → exécution
+
+![Séquence affectation](exports/sequences/affectation.png)
+
+**Maintenance** — plan, panne, ordre d'intervention, clôture
+
+![Séquence maintenance](exports/sequences/maintenance.png)
+
+**Inventaire** — campagne, scan QR, hors-ligne, écarts, clôture
+
+![Séquence inventaire](exports/sequences/inventaire.png)
+
+**Cession / sortie** — motif, PV, VNC, archivage
+
+![Séquence cession](exports/sequences/cession.png)
+
+**Rapport** — tableau de bord national + export PDF
+
+![Séquence rapport](exports/sequences/rapport.png)
+
+### Diagrammes d'activité
+
+**Affectation / transfert** — workflow avec validation
+
+![Activité affectation](exports/activites/affectation.png)
+
+**Campagne d'inventaire** — de bout en bout
+
+![Activité inventaire](exports/activites/inventaire.png)
+
+**Sortie du patrimoine** — réforme, cession, rebut…
+
+![Activité sortie](exports/activites/sortie.png)
+
+### Diagrammes d'états-transitions
+
+**Cycle de vie d'un bien** (CDC §6.4)
+
+![États bien](exports/etats-transitions/bien.png)
+
+**Demande de mouvement** — brouillon → clôturé
+
+![États mouvement](exports/etats-transitions/mouvement.png)
+
+**Intervention de maintenance**
+
+![États maintenance](exports/etats-transitions/maintenance.png)
+
+### Diagrammes de classes
+
+**Vue globale du domaine** — 14 entités clés
+
+![Classes global](exports/classes/global.png)
+
+**Auth** — utilisateurs, rôles, permissions, jetons
+
+![Classes auth](exports/classes/auth.png)
+
+**Organisation** — structures, sites, catégories
+
+![Classes organisation](exports/classes/organisation.png)
+
+**Asset** — biens, spécificités, photos, imports
+
+![Classes asset](exports/classes/asset.png)
+
+**Movement** — mouvements, validations, motifs
+
+![Classes movement](exports/classes/movement.png)
+
+**Inventory** — campagnes, constats, écarts
+
+![Classes inventory](exports/classes/inventory.png)
+
+**Maintenance** — plans, interventions, pannes, prestataires
+
+![Classes maintenance](exports/classes/maintenance.png)
+
+**Valuation** — valorisations, amortissements, réévaluations
+
+![Classes valuation](exports/classes/valuation.png)
+
+**Document** — documents, versions, règles d'accès
+
+![Classes document](exports/classes/document.png)
+
+**Notification** — notifications, audit_logs, modèles
+
+![Classes notification](exports/classes/notification.png)
+
+**Reporting** — agrégats et rapports générés
+
+![Classes reporting](exports/classes/reporting.png)
+
+### Modèles de données (MLD)
+
+**auth_db** — 7 tables
+
+![MLD auth_db](exports/donnees/auth_db.png)
+
+**organisation_db** — 6 tables
+
+![MLD organisation_db](exports/donnees/organisation_db.png)
+
+**asset_db** — 8 tables
+
+![MLD asset_db](exports/donnees/asset_db.png)
+
+**movement_db** — 5 tables
+
+![MLD movement_db](exports/donnees/movement_db.png)
+
+**inventory_db** — 6 tables
+
+![MLD inventory_db](exports/donnees/inventory_db.png)
+
+**maintenance_db** — 5 tables
+
+![MLD maintenance_db](exports/donnees/maintenance_db.png)
+
+**valuation_db** — 4 tables
+
+![MLD valuation_db](exports/donnees/valuation_db.png)
+
+**document_db** — 3 tables
+
+![MLD document_db](exports/donnees/document_db.png)
+
+**notification_db** — 4 tables
+
+![MLD notification_db](exports/donnees/notification_db.png)
+
+**reporting_db** — 5 tables (lecture agrégée)
+
+![MLD reporting_db](exports/donnees/reporting_db.png)
