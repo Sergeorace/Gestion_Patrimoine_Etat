@@ -15,7 +15,7 @@ COPY docker/postgres/init.sql ./init.sql
 COPY docker/monolith/ /monolith/
 RUN set -e; cd /var/www/services; \
  for s in auth-service organisation-service asset-service movement-service inventory-service maintenance-service valuation-service document-service notification-service reporting-service frontend; do \
-  (cd $s && composer update --no-dev --prefer-dist --no-interaction --no-scripts --optimize-autoloader && mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache) & done; wait; \
+  echo "== composer $s"; (cd $s && composer update --no-dev --prefer-dist --no-interaction --no-scripts --optimize-autoloader && mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache) || exit 1; done; \
  cd frontend && npm install --no-audit --no-fund && npm run build; \
  for s in auth-service organisation-service asset-service movement-service inventory-service maintenance-service valuation-service document-service notification-service reporting-service frontend; do [ -d $s/vendor ] || exit 1; done
 RUN mkdir -p /var/lib/pgsql/data /run/nginx /var/log/supervisor && chown -R postgres:postgres /var/lib/pgsql && chmod 700 /var/lib/pgsql/data
