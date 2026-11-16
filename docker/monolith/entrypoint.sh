@@ -20,6 +20,10 @@ say() { echo "[monolithe] $*"; }
 # Configs systeme depuis /monolith (image monolithe)
 cp /monolith/nginx.conf /etc/nginx/http.d/default.conf
 cp /monolith/proxy_params.inc /etc/nginx/proxy_params.inc
+# Le monolithe n'est servi qu'en HTTPS (edge SnapDeploy) : forcer le scheme
+# pour que Laravel genere des URLs https:// (sinon mixed-content = page blanche)
+grep -q 'fastcgi_param HTTPS' /etc/nginx/fastcgi_params \
+    || echo 'fastcgi_param HTTPS on;' >> /etc/nginx/fastcgi_params
 # php-fpm : remplacer les configs docker par defaut (pool www sans user = fatal)
 rm -f /usr/local/etc/php-fpm.d/*.conf /usr/local/etc/php-fpm.d/*.default
 printf '[global]\nerror_log = /proc/self/fd/2\nlog_limit = 8192\ndaemonize = no\n' > /usr/local/etc/php-fpm.d/00-globals.conf
