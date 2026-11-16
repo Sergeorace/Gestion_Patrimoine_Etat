@@ -12,8 +12,6 @@ WORKDIR /var/www
 COPY services ./services
 COPY frontend ./services/frontend
 COPY docker ./docker
-COPY docker/postgres/init.sql ./init.sql
-COPY docker/monolith/ /monolith/
 RUN set -e; cd /var/www/services; \
  S="auth-service organisation-service asset-service movement-service inventory-service maintenance-service valuation-service document-service notification-service reporting-service"; \
  (cd auth-service && composer update --no-dev --prefer-dist --no-interaction --no-scripts --optimize-autoloader); \
@@ -23,5 +21,8 @@ RUN set -e; cd /var/www/services; \
  cd frontend && npm install --no-audit --no-fund && npm run build; \
  cd /var/www/services; for s in $S frontend; do [ -d $s/vendor ] || exit 1; done
 RUN mkdir -p /var/lib/pgsql/data /run/nginx /var/log/supervisor && chown -R postgres:postgres /var/lib/pgsql && chmod 700 /var/lib/pgsql/data
+COPY docker/monolith/ /monolith/
+COPY docker/postgres/init.sql /var/www/init.sql
+COPY tools/seed_demo.sql /var/www/seed_demo.sql
 EXPOSE 80
 ENTRYPOINT ["sh","/monolith/entrypoint.sh"]

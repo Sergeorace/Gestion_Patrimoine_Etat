@@ -20,7 +20,6 @@ say() { echo "[monolithe] $*"; }
 # Configs systeme depuis /monolith (image monolithe)
 cp /monolith/nginx.conf /etc/nginx/http.d/default.conf
 cp /monolith/proxy_params.inc /etc/nginx/proxy_params.inc
-cp /monolith/supervisord.conf /etc/supervisor/conf.d/monolith.conf
 
 # ---------------------------------------------------------------------------
 # 1. Cles JWT RS256 (privee pour auth-service, publique pour tous)
@@ -46,8 +45,8 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
 fi
 if ! su postgres -c "$PGBIN/pg_ctl -D $PGDATA status" >/dev/null 2>&1; then
     say "Demarrage PostgreSQL…"
-    su postgres -c "$PGBIN/pg_ctl -D $PGDATA -l /var/log/postgres.log -w -t 60 \
-        -o '-c listen_addresses=127.0.0.1 -p 5432 -c max_connections=100' start" >/dev/null
+    su postgres -c "$PGBIN/pg_ctl -D $PGDATA -l $PGDATA/server.log -w -t 60 \
+        -o '-c listen_addresses=127.0.0.1 -p 5432 -c max_connections=100 -c unix_socket_directories=/tmp' start" >/dev/null
 fi
 
 # Bases logiques (idempotent)
@@ -112,7 +111,7 @@ write_service_env() {
         echo "REDIS_PORT=6379"
         echo "REDIS_PASSWORD=null"
         echo "JWT_PUBLIC_KEY_FILE=$PATRIMOINE/jwt_public.pem"
-        [ "$svc" = "auth-service" ] && echo "JWT_PRIVATE_KEY_FILE=$PATRIMOINE/jwt_private.pem"
+        if [ "$svc" = "auth-service" ]; then echo "JWT_PRIVATE_KEY_FILE=$PATRIMOINE/jwt_private.pem"; fi
         echo "SERVICE_TOKEN=$SERVICE_TOKEN"
         echo "RABBITMQ_HOST=127.0.0.1"
         echo "RABBITMQ_PORT=5672"
@@ -132,7 +131,7 @@ write_service_env() {
 }
 
 echo "$SERVICES" | while IFS='|' read -r svc db port appname; do
-    [ -n "$svc" ] && write_service_env "$svc" "$db" "$appname"
+    if [ -n "$svc" ]; then write_service_env "$svc" "$db" "$appname"; fi
 done
 
 # .env frontend (sessions/fichiers, pas de JWT)
@@ -160,15 +159,17 @@ EOF
 # 5. Migrations + seed demo (idempotent)
 # ---------------------------------------------------------------------------
 echo "$SERVICES" | while IFS='|' read -r svc db port appname; do
-    [ -z "$svc" ] && continue
+    if [ -z "$svc" ]; then continue; fi
     say "Migration $svc…"
     (cd "$APP_ROOT/$svc" && php artisan migrate --force >/dev/null 2>&1) || say "  migrate $svc : ignore"
 done
 say "Seed auth (comptes demo)…"
 (cd "$APP_ROOT/auth-service" && php artisan db:seed --force >/dev/null 2>&1) || say "  seed auth : ignore"
+say "Seed demo (donnees metier)…"
+psql -h 127.0.0.1 -U patrimoine -d postgres -v ON_ERROR_STOP=0 -f /var/www/seed_demo.sql >/dev/null 2>&1 || say "  seed demo : ignore"
 
 # ---------------------------------------------------------------------------
 # 6. Supervisord
 # ---------------------------------------------------------------------------
 say "Demarrage supervisord (nginx + services PHP)…"
-exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+exec /usr/bin/supervisord -c /monolith/supervisord.conf
