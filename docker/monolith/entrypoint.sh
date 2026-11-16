@@ -20,6 +20,10 @@ say() { echo "[monolithe] $*"; }
 # Configs systeme depuis /monolith (image monolithe)
 cp /monolith/nginx.conf /etc/nginx/http.d/default.conf
 cp /monolith/proxy_params.inc /etc/nginx/proxy_params.inc
+# php-fpm : remplacer les configs docker par defaut (pool www sans user = fatal)
+rm -f /usr/local/etc/php-fpm.d/*.conf /usr/local/etc/php-fpm.d/*.default
+printf '[global]\nerror_log = /proc/self/fd/2\nlog_limit = 8192\ndaemonize = no\n' > /usr/local/etc/php-fpm.d/00-globals.conf
+cp /monolith/php-fpm-pools.conf /usr/local/etc/php-fpm.d/patrimoine.conf
 
 # ---------------------------------------------------------------------------
 # 1. Cles JWT RS256 (privee pour auth-service, publique pour tous)
@@ -46,7 +50,7 @@ fi
 if ! su postgres -c "$PGBIN/pg_ctl -D $PGDATA status" >/dev/null 2>&1; then
     say "Demarrage PostgreSQL…"
     su postgres -c "$PGBIN/pg_ctl -D $PGDATA -l $PGDATA/server.log -w -t 60 \
-        -o '-c listen_addresses=127.0.0.1 -p 5432 -c max_connections=100 -c unix_socket_directories=/tmp' start" >/dev/null
+        -o '-c listen_addresses=127.0.0.1 -p 5432 -c max_connections=30 -c shared_buffers=32MB -c work_mem=2MB -c maintenance_work_mem=16MB -c unix_socket_directories=/tmp' start" >/dev/null
 fi
 
 # Bases logiques (idempotent)
@@ -63,7 +67,7 @@ done
 # ---------------------------------------------------------------------------
 if ! redis-cli -h 127.0.0.1 ping >/dev/null 2>&1; then
     say "Demarrage Redis…"
-    redis-server --daemonize yes --dir /tmp --save '' --appendonly no --maxmemory 128mb \
+    redis-server --daemonize yes --dir /tmp --save '' --appendonly no --maxmemory 48mb \
         --maxmemory-policy allkeys-lru >/dev/null 2>&1 || true
 fi
 
@@ -162,9 +166,8 @@ echo "$SERVICES" | while IFS='|' read -r svc db port appname; do
     if [ -z "$svc" ]; then continue; fi
     say "Migration $svc…"
     (cd "$APP_ROOT/$svc" && php artisan migrate --force >/dev/null 2>&1) || say "  migrate $svc : ignore"
+    (cd "$APP_ROOT/$svc" && php artisan db:seed --force >/dev/null 2>&1) || true
 done
-say "Seed auth (comptes demo)…"
-(cd "$APP_ROOT/auth-service" && php artisan db:seed --force >/dev/null 2>&1) || say "  seed auth : ignore"
 say "Seed demo (donnees metier)…"
 psql -h 127.0.0.1 -U patrimoine -d postgres -v ON_ERROR_STOP=0 -f /var/www/seed_demo.sql >/dev/null 2>&1 || say "  seed demo : ignore"
 
